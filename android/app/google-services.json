@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "269415961571",
+    "project_id": "sleepingapp-bf7ac",
+    "storage_bucket": "sleepingapp-bf7ac.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:269415961571:android:40e9542227417aaee446d6",
+        "android_client_info": {
+          "package_name": "com.example.sleeping_app_flutter"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "269415961571-pttmb3rrdpac8mjb2asre8h6mamkhimc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAhIcJ0bBU34kbhLMw2S_6gaeT0ybTU458"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "269415961571-pttmb3rrdpac8mjb2asre8h6mamkhimc.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
