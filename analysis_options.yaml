@@ -21,11 +21,17 @@ linter:
   # `// ignore_for_file: name_of_lint` syntax on the line or in the file
   # producing the lint.
   rules:
+    # --- Các luật cũ của bạn ---
     avoid_print: false
     prefer_single_quotes: true
     no_leading_underscores_for_local_identifiers: true
     require_trailing_commas: true
     sort_child_properties_last: true
+    cancel_subscriptions: true
+    sized_box_for_whitespace: true
+    always_declare_return_types: true
+    avoid_dynamic_calls: true
+    use_key_in_widget_constructors: true
 formatter:
   trailing_commas: preserve
 # Additional information about this file can be found at
