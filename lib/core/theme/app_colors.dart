@@ -54,7 +54,6 @@ class AppColors {
     surface: Color(0xFF101412), // Deep Moss Surface
     onSurface: Color(0xFFE1E3E0),
     surfaceContainerHighest: Color(0xFF353533),
-    surfaceVariant: Color(0xFF3F4943),
     onSurfaceVariant: Color(0xFFBFC9C2),
     outline: Color(0xFF8B928D),
     outlineVariant: Color(0xFF454841),

@@ -6,14 +6,16 @@ class CustomTextField extends StatefulWidget {
   final bool isPassword;
   final TextInputType keyboardType;
   final TextEditingController? controller;
+  final Widget? suffix;
 
   const CustomTextField({
     super.key,
     required this.hintText,
     required this.prefixIcon,
-    this.isPassword = false, // Mặc định không phải là ô mật khẩu
+    this.isPassword = false,
     this.keyboardType = TextInputType.text,
     this.controller,
+    this.suffix,
   });
 
   @override
@@ -40,6 +42,12 @@ class _CustomTextFieldState extends State<CustomTextField> {
       controller: widget.controller,
       keyboardType: widget.keyboardType,
       obscureText: _obscureText,
+      textInputAction: TextInputAction.next,
+      autocorrect: false,
+      enableSuggestions: !widget.isPassword,
+      autofillHints: widget.keyboardType == TextInputType.emailAddress
+          ? [AutofillHints.email]
+          : (widget.isPassword ? [AutofillHints.password] : null),
       style: textTheme.bodyLarge?.copyWith(
         fontSize: 15,
         color: colorScheme.onSurface,
@@ -49,7 +57,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
         hintText: widget.hintText,
         hintStyle: TextStyle(color: colorScheme.outlineVariant),
         filled: true,
-        fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
 
         // 1. Icon bên trái (Cố định)
@@ -59,8 +67,8 @@ class _CustomTextFieldState extends State<CustomTextField> {
           size: 20,
         ),
 
-        // 2. Icon con mắt bên phải (Chỉ render nếu isPassword = true)
-        suffixIcon: widget.isPassword
+
+        suffixIcon: widget.suffix ?? (widget.isPassword
             ? IconButton(
           icon: Icon(
             _obscureText ? Icons.visibility_off : Icons.visibility,
@@ -74,7 +82,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
             });
           },
         )
-            : null,
+            : null),
 
         // 3. Viền lúc bình thường (Không có viền, chỉ bo góc)
         border: OutlineInputBorder(
