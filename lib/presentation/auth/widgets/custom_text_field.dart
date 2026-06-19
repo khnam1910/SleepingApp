@@ -7,11 +7,13 @@ class CustomTextField extends StatefulWidget {
   final TextInputType keyboardType;
   final TextEditingController? controller;
   final Widget? suffix;
+  final String? Function(String?)? validator;
 
   const CustomTextField({
     super.key,
     required this.hintText,
     required this.prefixIcon,
+    this.validator,
     this.isPassword = false,
     this.keyboardType = TextInputType.text,
     this.controller,
@@ -39,6 +41,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
     final textTheme = Theme.of(context).textTheme;
 
     return TextFormField(
+      validator: widget.validator,
       controller: widget.controller,
       keyboardType: widget.keyboardType,
       obscureText: _obscureText,
@@ -58,7 +61,10 @@ class _CustomTextFieldState extends State<CustomTextField> {
         hintStyle: TextStyle(color: colorScheme.outlineVariant),
         filled: true,
         fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
 
         // 1. Icon bên trái (Cố định)
         prefixIcon: Icon(
@@ -67,22 +73,23 @@ class _CustomTextFieldState extends State<CustomTextField> {
           size: 20,
         ),
 
-
-        suffixIcon: widget.suffix ?? (widget.isPassword
-            ? IconButton(
-          icon: Icon(
-            _obscureText ? Icons.visibility_off : Icons.visibility,
-            color: colorScheme.outline,
-            size: 20,
-          ),
-          onPressed: () {
-            // Cập nhật giao diện: Chỉ vẽ lại ô mật khẩu này, không vẽ lại cả trang
-            setState(() {
-              _obscureText = !_obscureText;
-            });
-          },
-        )
-            : null),
+        suffixIcon:
+            widget.suffix ??
+            (widget.isPassword
+                ? IconButton(
+                    icon: Icon(
+                      _obscureText ? Icons.visibility_off : Icons.visibility,
+                      color: colorScheme.outline,
+                      size: 20,
+                    ),
+                    onPressed: () {
+                      // Cập nhật giao diện: Chỉ vẽ lại ô mật khẩu này, không vẽ lại cả trang
+                      setState(() {
+                        _obscureText = !_obscureText;
+                      });
+                    },
+                  )
+                : null),
 
         // 3. Viền lúc bình thường (Không có viền, chỉ bo góc)
         border: OutlineInputBorder(
