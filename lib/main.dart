@@ -33,7 +33,7 @@ class SleepingApp extends StatelessWidget {
 
       themeMode: ThemeMode.light,
 
-      home: CreatePasswordPage(),
+      home: RegisterPage(),
     );
   }
 }
