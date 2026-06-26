@@ -3,30 +3,28 @@ import '../../../core/utils/app_validator.dart';
 import '../widgets/custom_label_input.dart';
 import '../widgets/custom_text_field.dart';
 
-class CreatePasswordPage extends StatefulWidget {
-  const CreatePasswordPage({super.key});
+class ForgotPasswordPage extends StatefulWidget {
+  const ForgotPasswordPage({super.key});
 
   @override
-  State<CreatePasswordPage> createState() => _CreatePasswordPageState();
+  State<ForgotPasswordPage> createState() => _ForgotPasswordPageState();
 }
 
-class _CreatePasswordPageState extends State<CreatePasswordPage> {
+class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   final _formKey = GlobalKey<FormState>();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
+  final _emailController = TextEditingController();
 
   @override
   void dispose() {
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 
-  void _onFinish() {
+  void _onSendCode() {
     if (_formKey.currentState!.validate()) {
-      // Logic khi validate thành công
+      // Logic gửi mã OTP khôi phục mật khẩu
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Thiết lập mật khẩu thành công!')),
+        const SnackBar(content: Text('Mã khôi phục đã được gửi đến email của bạn.')),
       );
     }
   }
@@ -84,7 +82,7 @@ class _CreatePasswordPageState extends State<CreatePasswordPage> {
 
                           // 3. TIÊU ĐỀ
                           Text(
-                            'Thiết lập mật khẩu',
+                            'Quên mật khẩu?',
                             style: textTheme.headlineSmall?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: colorScheme.onSurface,
@@ -95,7 +93,7 @@ class _CreatePasswordPageState extends State<CreatePasswordPage> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Tạo một khẩu mạnh để bảo vệ hành \ntrình giấc ngủ của bạn.',
+                            'Đừng lo lắng, hãy nhập email đã đăng ký \nđể nhận hướng dẫn đặt lại mật khẩu.',
                             style: textTheme.bodyMedium?.copyWith(
                               color: colorScheme.onSurfaceVariant,
                               fontSize: 14,
@@ -104,7 +102,7 @@ class _CreatePasswordPageState extends State<CreatePasswordPage> {
                             textAlign: TextAlign.center,
                           ),
 
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 24),
 
                           // 4. FORM CARD
                           Container(
@@ -125,35 +123,21 @@ class _CreatePasswordPageState extends State<CreatePasswordPage> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const CustomLabelInput(text: 'Mật khẩu'),
+                                  const CustomLabelInput(text: 'Email khôi phục'),
                                   const SizedBox(height: 10),
                                   CustomTextField(
-                                    controller: _passwordController,
-                                    validator: AppValidator.validatePassword,
-                                    hintText: 'Nhập mật khẩu mới',
-                                    prefixIcon: Icons.lock_outline,
-                                    isPassword: true,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  const CustomLabelInput(text: 'Xác nhận mật khẩu'),
-                                  const SizedBox(height: 10),
-                                  CustomTextField(
-                                    controller: _confirmPasswordController,
-                                    validator: (value) =>
-                                        AppValidator.validateConfirmPassword(
-                                      _passwordController.text,
-                                      value,
-                                    ),
-                                    hintText: 'Nhập lại mật khẩu',
-                                    prefixIcon: Icons.lock_reset_outlined,
-                                    isPassword: true,
+                                    controller: _emailController,
+                                    validator: AppValidator.validateEmail,
+                                    hintText: 'your-email@example.com',
+                                    prefixIcon: Icons.mail_outline,
+                                    keyboardType: TextInputType.emailAddress,
                                   ),
                                   const SizedBox(height: 12),
                                   SizedBox(
                                     width: double.infinity,
                                     height: 52,
                                     child: ElevatedButton(
-                                      onPressed: _onFinish,
+                                      onPressed: _onSendCode,
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: colorScheme.primary,
                                         foregroundColor: colorScheme.onPrimary,
@@ -165,12 +149,12 @@ class _CreatePasswordPageState extends State<CreatePasswordPage> {
                                       child: const Row(
                                         mainAxisAlignment: MainAxisAlignment.center,
                                         children: [
-                                          Text('Hoàn tất và bắt đầu',
+                                          Text('Gửi mã xác nhận',
                                               style: TextStyle(
                                                   fontWeight: FontWeight.bold,
                                                   fontSize: 16)),
                                           SizedBox(width: 8),
-                                          Icon(Icons.arrow_forward, size: 18),
+                                          Icon(Icons.send_rounded, size: 18),
                                         ],
                                       ),
                                     ),
@@ -182,17 +166,29 @@ class _CreatePasswordPageState extends State<CreatePasswordPage> {
 
                           const Spacer(),
 
-                          // 5. GHI CHÚ CHÂN TRANG
+                          // 5. FOOTER
                           Padding(
                             padding: const EdgeInsets.symmetric(vertical: 24),
-                            child: Text(
-                              'Mật khẩu phải có ít nhất 8 ký tự, bao \ngồm chữ và số.',
-                              textAlign: TextAlign.center,
-                              style: textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                                fontWeight: FontWeight.w500,
-                                height: 1.5,
-                              ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text('Bạn nhớ mật khẩu? ',
+                                    style: textTheme.bodyMedium?.copyWith(fontSize: 13)),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  style: TextButton.styleFrom(
+                                    visualDensity: VisualDensity.compact,
+                                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                                  ),
+                                  child: Text('Quay lại đăng nhập',
+                                      style: textTheme.labelMedium?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: colorScheme.primary,
+                                        fontSize: 13,
+                                        decoration: TextDecoration.underline,
+                                      )),
+                                ),
+                              ],
                             ),
                           ),
                         ],

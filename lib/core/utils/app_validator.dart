@@ -18,6 +18,7 @@ class AppValidator {
     if (value.length < 8) {
       return 'Mật khẩu phải có ít nhất 8 kí tự';
     }
+    return null;
   }
   static String? validateConfirmPassword(String? password, String? confirmPassword) {
     if (confirmPassword == null || confirmPassword.isEmpty) {
@@ -26,5 +27,6 @@ class AppValidator {
     if (confirmPassword != password) {
       return 'Mật khẩu không khớp';
     }
+    return null;
   }
 }
