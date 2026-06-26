@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:sleeping_app_flutter/presentation/auth/pages/createpassword.dart';
-import 'package:sleeping_app_flutter/presentation/auth/pages/register.dart';
+import 'package:sleeping_app_flutter/presentation/auth/pages/login.dart';
 import 'core/theme/app_colors.dart';
 import 'core/theme/app_typography.dart';
 void main() {
@@ -33,7 +32,7 @@ class SleepingApp extends StatelessWidget {
 
       themeMode: ThemeMode.light,
 
-      home: RegisterPage(),
+      home: LoginPage(),
     );
   }
 }

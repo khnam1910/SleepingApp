@@ -4,6 +4,7 @@ import 'package:sleeping_app_flutter/core/utils/app_validator.dart';
 
 import '../widgets/custom_label_input.dart';
 import '../widgets/custom_text_field.dart';
+import 'createpassword.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -14,6 +15,31 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  final _otpController = TextEditingController();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _otpController.dispose();
+    super.dispose();
+  }
+
+  void _onContinue() {
+    if (_formKey.currentState!.validate()) {
+      if (_otpController.text.length < 6) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Vui lòng nhập đầy đủ mã OTP')),
+        );
+        return;
+      }
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const CreatePasswordPage()),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -105,16 +131,18 @@ class _RegisterPageState extends State<RegisterPage> {
                                   const CustomLabelInput(text: 'Email của bạn'),
                                   const SizedBox(height: 10),
                                   CustomTextField(
+                                    controller: _emailController,
                                     validator: AppValidator.validateEmail,
                                     hintText: 'Nhập địa chỉ email',
                                     prefixIcon: Icons.mail_outline,
                                     keyboardType: TextInputType.emailAddress,
                                     suffix: TextButton(
                                       onPressed: () {
-                                        if(_formKey.currentState!.validate())
+                                        if(_formKey.currentState!.validate()) {
                                           print('dữ liệu hợp lệ, chuyển sang bước tiếp theo');
-                                        else
+                                        } else {
                                           print('có lỗi xảy ra');
+                                        }
                                       },
                                       child: Text(
                                         'Gửi mã',
@@ -126,13 +154,14 @@ class _RegisterPageState extends State<RegisterPage> {
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(height: 20),
+                                  const SizedBox(height: 4),
                                   const Center(
                                     child: CustomLabelInput(text: 'Mã xác nhận (OTP)'),
                                   ),
                                   const SizedBox(height: 12),
                                   Center(
                                     child: Pinput(
+                                      controller: _otpController,
                                       length: 6,
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       crossAxisAlignment: CrossAxisAlignment.center,
@@ -209,7 +238,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                     width: double.infinity,
                                     height: 52,
                                     child: ElevatedButton(
-                                      onPressed: () {},
+                                      onPressed: _onContinue,
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: colorScheme.primary,
                                         foregroundColor: colorScheme.onPrimary,
@@ -223,7 +252,8 @@ class _RegisterPageState extends State<RegisterPage> {
                                         children: [
                                           Text('Tiếp tục',
                                               style: TextStyle(
-                                                  fontWeight: FontWeight.bold, fontSize: 16)),
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16)),
                                           SizedBox(width: 8),
                                           Icon(Icons.arrow_forward, size: 18),
                                         ],
@@ -238,13 +268,41 @@ class _RegisterPageState extends State<RegisterPage> {
                           const Spacer(),
                           Padding(
                             padding: const EdgeInsets.symmetric(vertical: 20),
-                            child: Text(
-                              'Bằng việc tiếp tục, bạn đồng ý với Điều khoản \n & Chính sách bảo mật',
-                              textAlign: TextAlign.center,
-                              style: textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                                height: 1.5,
-                              ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text('Đã có tài khoản? ',
+                                        style: textTheme.bodyMedium
+                                            ?.copyWith(fontSize: 13)),
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      style: TextButton.styleFrom(
+                                        visualDensity: VisualDensity.compact,
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 4),
+                                      ),
+                                      child: Text('Đăng nhập ngay',
+                                          style: textTheme.labelMedium?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: colorScheme.primary,
+                                            fontSize: 13,
+                                            decoration: TextDecoration.underline,
+                                          )),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Bằng việc tiếp tục, bạn đồng ý với Điều khoản \n & Chính sách bảo mật',
+                                  textAlign: TextAlign.center,
+                                  style: textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                    height: 1.5,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],

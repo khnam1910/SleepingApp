@@ -102,6 +102,14 @@ class _CustomTextFieldState extends State<CustomTextField> {
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide(color: colorScheme.primary, width: 2),
         ),
+        helperText: ' ',
+        helperStyle: const TextStyle(fontSize: 12, height: 1.5),
+        errorStyle: const TextStyle(
+          fontSize: 12,
+          height: 1.5,
+          fontWeight: FontWeight.w500,
+        ),
+        errorMaxLines: 1,
       ),
     );
   }
