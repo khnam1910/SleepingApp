@@ -9,6 +9,9 @@ class CustomTextField extends StatefulWidget {
   final Widget? suffix;
   final String? Function(String?)? validator;
 
+  // 1. THÊM BIẾN ENABLED
+  final bool enabled;
+
   const CustomTextField({
     super.key,
     required this.hintText,
@@ -18,6 +21,8 @@ class CustomTextField extends StatefulWidget {
     this.keyboardType = TextInputType.text,
     this.controller,
     this.suffix,
+    // 2. GÁN MẶC ĐỊNH LÀ TRUE (để không làm lỗi các trang cũ chưa truyền thuộc tính này)
+    this.enabled = true,
   });
 
   @override
@@ -25,13 +30,11 @@ class CustomTextField extends StatefulWidget {
 }
 
 class _CustomTextFieldState extends State<CustomTextField> {
-  // Biến quản lý trạng thái ẩn/hiện mật khẩu (Chỉ tác động bên trong Widget này)
   late bool _obscureText;
 
   @override
   void initState() {
     super.initState();
-    // Gán trạng thái ban đầu dựa vào việc nó có phải ô mật khẩu hay không
     _obscureText = widget.isPassword;
   }
 
@@ -41,6 +44,8 @@ class _CustomTextFieldState extends State<CustomTextField> {
     final textTheme = Theme.of(context).textTheme;
 
     return TextFormField(
+      // 3. TRUYỀN XUỐNG TEXTFORMFIELD
+      enabled: widget.enabled,
       validator: widget.validator,
       controller: widget.controller,
       keyboardType: widget.keyboardType,
@@ -53,23 +58,35 @@ class _CustomTextFieldState extends State<CustomTextField> {
           : (widget.isPassword ? [AutofillHints.password] : null),
       style: textTheme.bodyLarge?.copyWith(
         fontSize: 15,
-        color: colorScheme.onSurface,
+        // Làm mờ chữ nếu bị disable
+        color: widget.enabled
+            ? colorScheme.onSurface
+            : colorScheme.onSurface.withValues(alpha: 0.5),
       ),
-      // Thuộc tính decoration quản lý toàn bộ giao diện của ô nhập liệu
       decoration: InputDecoration(
         hintText: widget.hintText,
-        hintStyle: TextStyle(color: colorScheme.outlineVariant),
+        hintStyle: TextStyle(
+          color: widget.enabled
+              ? colorScheme.outlineVariant
+              : colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
         filled: true,
-        fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        // Làm mờ nền đi một chút nếu bị disable
+        fillColor: widget.enabled
+            ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.3)
+            : colorScheme.surfaceContainerHighest.withValues(alpha: 0.1),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 16,
         ),
 
-        // 1. Icon bên trái (Cố định)
+        // Icon bên trái
         prefixIcon: Icon(
           widget.prefixIcon,
-          color: colorScheme.outline,
+          // Làm mờ icon nếu disable
+          color: widget.enabled
+              ? colorScheme.outline
+              : colorScheme.outline.withValues(alpha: 0.3),
           size: 20,
         ),
 
@@ -79,29 +96,37 @@ class _CustomTextFieldState extends State<CustomTextField> {
                 ? IconButton(
                     icon: Icon(
                       _obscureText ? Icons.visibility_off : Icons.visibility,
-                      color: colorScheme.outline,
+                      color: widget.enabled
+                          ? colorScheme.outline
+                          : colorScheme.outline.withValues(alpha: 0.3),
                       size: 20,
                     ),
-                    onPressed: () {
-                      // Cập nhật giao diện: Chỉ vẽ lại ô mật khẩu này, không vẽ lại cả trang
-                      setState(() {
-                        _obscureText = !_obscureText;
-                      });
-                    },
+                    // Khóa luôn nút bấm ẩn/hiện mật khẩu nếu form bị disable
+                    onPressed: widget.enabled
+                        ? () {
+                            setState(() {
+                              _obscureText = !_obscureText;
+                            });
+                          }
+                        : null,
                   )
                 : null),
 
-        // 3. Viền lúc bình thường (Không có viền, chỉ bo góc)
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
         ),
 
-        // 4. Viền lúc người dùng bấm vào (Tự động đổi màu Primary và dày lên 2px)
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide(color: colorScheme.primary, width: 2),
         ),
+
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+
         helperText: ' ',
         helperStyle: const TextStyle(fontSize: 12, height: 1.5),
         errorStyle: const TextStyle(
