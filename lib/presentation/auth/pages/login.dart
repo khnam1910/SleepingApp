@@ -28,7 +28,6 @@ class _LoginPageState extends State<LoginPage> {
 
   void _onLogin() {
     if (_formKey.currentState!.validate()) {
-      // Xử lý logic đăng nhập tại đây
       print('Đang đăng nhập với: ${_emailController.text}');
     }
   }

@@ -20,9 +20,7 @@ class UserModel extends UserEntity {
       avatarUrl: json['avatar_url'] as String?,
       birthYear: json['birth_year'] as int?,
       gender: json['gender'] as String?,
-      // Ép kiểu double an toàn cho weight_kg (phòng trường hợp lưu nhầm int)
       weightKg: (json['weight_kg'] as num?)?.toDouble(),
-      // Nếu user chưa thiết lập mục tiêu, mặc định là 8 tiếng (480 phút)
       targetSleepMinutes: json['target_sleep_minutes'] as int? ?? 480,
     );
   }
