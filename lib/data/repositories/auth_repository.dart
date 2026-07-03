@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -31,12 +32,24 @@ class AuthRepository {
     required String password,
   }) async {
     try {
-      return await _firebaseAuth.createUserWithEmailAndPassword(
+      final userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
+      final user = userCredential.user;
+      if (user != null) {
+        final firestore = FirebaseFirestore.instance;
+
+        await firestore.collection('users').doc(user.uid).set({
+          'email': email,
+          'created_at': FieldValue.serverTimestamp(),
+        });
+      }
+      return userCredential;
     } on FirebaseAuthException catch (e) {
       throw Exception(e.message);
+    } catch (e) {
+      throw Exception('Lỗi khi lưu dữ liệu người dùng : ${e.toString()}');
     }
   }
 
