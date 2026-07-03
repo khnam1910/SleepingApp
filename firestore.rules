@@ -1,0 +1,26 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Chỉ cho phép user lưu/sửa thông tin vào đúng ID của chính họ
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Tạm thời mở quyền cho các bảng khác (chỉ dành cho user đã đăng nhập)
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+
+  }
+}
+
+//service cloud.firestore {
+//  match /databases/{database}/documents {
+//    // TẠM THỜI MỞ TOÀN BỘ ĐỂ TEST
+//    match /{document=**} {
+//      allow read, write: if true;
+//    }
+//  }
+//}
