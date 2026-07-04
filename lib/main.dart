@@ -60,7 +60,9 @@ class SleepingApp extends StatelessWidget {
                 return const HomePage();
               } else if (state is AuthUnauthenticated ||
                   state is AuthFailure ||
-                  state is AuthInitial) {
+                  state is AuthInitial ||
+                  state is AuthLoading ||
+                  state is AuthUnauthenticated) {
                 return const LoginPage();
               }
               return const Scaffold(
