@@ -331,12 +331,22 @@ class _LoginPageState extends State<LoginPage> {
                                   svgPath:
                                       'assets/icons/material-icon-theme--google.svg',
                                   iconSize: 24,
+                                  onPressed: () {
+                                    context.read<AuthBloc>().add(
+                                      AuthGoogleSignInRequested(),
+                                    );
+                                  },
                                 ),
                                 const SizedBox(width: 16),
                                 _buildSocialIcon(
                                   context,
                                   icon: Icons.facebook,
                                   iconColor: const Color(0xFF1877F2),
+                                  onPressed: () {
+                                    context.read<AuthBloc>().add(
+                                      AuthFacebookSignInRequested(),
+                                    );
+                                  },
                                 ),
                                 const SizedBox(width: 16),
                                 _buildSocialIcon(

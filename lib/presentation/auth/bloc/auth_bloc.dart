@@ -29,6 +29,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthForgotPasswordRequested>(_onAuthForgotPasswordRequested);
     on<AuthSendOtpRequested>(_onAuthSendOtpRequested);
     on<AuthVerifyOtpRequested>(_onAuthVerifyOtpRequested);
+    on<AuthFacebookSignInRequested>(_onAuthFacebookSignInRequested);
   }
 
   Future<void> _onAuthSendOtpRequested(
@@ -122,27 +123,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
-        emit(AuthUnauthenticated());
-        return;
-      }
+      // Gọi thẳng xuống Repository
+      final userCredential = await _authRepository.signInWithGoogle();
 
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-      final AuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      await _firebaseAuth.signInWithCredential(credential);
-      if (_firebaseAuth.currentUser != null) {
-        emit(AuthAuthenticated(userId: _firebaseAuth.currentUser!.uid));
+      if (userCredential != null && userCredential.user != null) {
+        emit(AuthAuthenticated(userId: userCredential.user!.uid));
       } else {
-        emit(const AuthFailure(message: 'Đăng nhập Google thất bại'));
+        // Trường hợp popup hiện lên nhưng người dùng bấm Hủy -> Quay về trạng thái chưa đăng nhập
+        emit(AuthUnauthenticated());
       }
     } catch (e) {
-      emit(AuthFailure(message: e.toString()));
+      emit(AuthFailure(message: e.toString().replaceAll('Exception: ', '')));
     }
   }
 
@@ -150,8 +141,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthLogoutRequested event,
     Emitter<AuthState> emit,
   ) async {
-    await _googleSignIn.signOut();
-    await _firebaseAuth.signOut();
+    await _authRepository.signOut();
     emit(AuthUnauthenticated());
   }
 
@@ -169,6 +159,26 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           message: e.toString().replaceAll('Exception: ', ''),
         ),
       );
+    }
+  }
+
+  Future<void> _onAuthFacebookSignInRequested(
+    AuthFacebookSignInRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(AuthLoading());
+    try {
+      // Gọi hàm từ Repository mà bạn vừa mới viết
+      final userCredential = await _authRepository.signInWithFacebook();
+
+      if (userCredential != null && userCredential.user != null) {
+        emit(AuthAuthenticated(userId: userCredential.user!.uid));
+      } else {
+        // Người dùng bấm Hủy popup Facebook
+        emit(AuthUnauthenticated());
+      }
+    } catch (e) {
+      emit(AuthFailure(message: e.toString().replaceAll('Exception: ', '')));
     }
   }
 }
