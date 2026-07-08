@@ -56,3 +56,5 @@ class AuthVerifyOtpRequested extends AuthEvent {
   final String otp;
   const AuthVerifyOtpRequested({required this.email, required this.otp});
 }
+
+class AuthFacebookSignInRequested extends AuthEvent {}
