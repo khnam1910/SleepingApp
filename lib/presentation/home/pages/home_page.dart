@@ -1,44 +1,812 @@
+import 'dart:math' as math; // Thêm thư viện toán học để xoay hình
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../../core/theme/theme_cubit.dart';
 import '../../auth/bloc/auth_bloc.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
   @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage>
+    with SingleTickerProviderStateMixin {
+  int _selectedIndex = 0;
+
+  // Đổi tên biến cho phù hợp với hiệu ứng xoay tròn
+  late AnimationController _rotateController;
+
+  @override
+  void initState() {
+    super.initState();
+    // Khởi tạo bộ đếm nhịp xoay: Xoay 1 vòng mất 10 giây (Rất chậm và thư giãn)
+    _rotateController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 10),
+    )..repeat(); // repeat() giúp hình xoay liên tục không bao giờ dừng
+  }
+
+  @override
+  void dispose() {
+    _rotateController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dashboard'),
-        actions: [
-          IconButton(
+      extendBody: true,
+      extendBodyBehindAppBar: true,
+      backgroundColor: colors.surface,
+      appBar: _buildAppBar(context, colors),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + kToolbarHeight + 10,
+          left: 24,
+          right: 24,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildGreeting(colors),
+            const SizedBox(height: 30),
+            _buildStartSleepHero(colors), // Giao diện nút xoay được gắn ở đây
+            const SizedBox(height: 40),
+            _buildSectionTitle("LAST NIGHT'S SLEEP", colors),
+            const SizedBox(height: 16),
+            _buildQuickStats(colors),
+            const SizedBox(height: 16),
+            _buildStreakCard(colors),
+            const SizedBox(height: 16),
+            _buildSleepChart(colors),
+            const SizedBox(height: 16),
+            _buildBottomStatsRow(colors),
+            const SizedBox(height: 120),
+          ],
+        ),
+      ),
+      bottomNavigationBar: _buildCustomBottomNav(colors),
+    );
+  }
+
+  // --- CÁC COMPONENT GIAO DIỆN ---
+
+  AppBar _buildAppBar(BuildContext context, ColorScheme colors) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    return AppBar(
+      backgroundColor: colors.surface.withOpacity(0.7),
+      elevation: 0,
+      scrolledUnderElevation: 0,
+
+      flexibleSpace: ClipRRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+          child: Container(color: Colors.transparent),
+        ),
+      ),
+      centerTitle: true,
+      title: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: colors.primaryContainer.withOpacity(0.4),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(Icons.eco, size: 24, color: colors.onPrimaryContainer),
+      ),
+      leading: Padding(
+        padding: const EdgeInsets.only(left: 16.0),
+        child: GestureDetector(
+          onTap: () {
+            print("Nhấn vào Avatar để mở Settings");
+          },
+          child: CircleAvatar(
+            backgroundColor: colors.outlineVariant,
+            backgroundImage: const NetworkImage('https://i.pravatar.cc/100'),
+          ),
+        ),
+      ),
+      actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 12.0),
+          child: IconButton(
+            icon: Icon(
+              isDarkMode ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+              color: colors.onSurface,
+            ),
             onPressed: () {
-              context.read<AuthBloc>().add(AuthLogoutRequested());
+              context.read<ThemeCubit>().toggleTheme();
+              print("Nhấn để đổi theme");
             },
-            icon: const Icon(Icons.logout),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGreeting(ColorScheme colors) {
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, state) {
+        String subtitleText = 'Đang tải thông tin...';
+        if (state is AuthAuthenticated) {
+          final shortId = state.userId.length > 8
+              ? '${state.userId.substring(0, 8)}...'
+              : state.userId;
+          subtitleText = 'User ID: $shortId';
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Chào buổi sáng!',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: colors.onSurface,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              subtitleText,
+              style: TextStyle(fontSize: 15, color: colors.onSurfaceVariant),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // CẬP NHẬT: NÚT START SLEEP VỚI 2 LỚP XOAY TRÒN
+  Widget _buildStartSleepHero(ColorScheme colors) {
+    return Column(
+      children: [
+        Center(
+          child: GestureDetector(
+            onTap: () {
+              print("Bắt đầu ngủ");
+            },
+            child: SizedBox(
+              width: 200,
+              height: 200,
+              // Stack giúp chúng ta xếp chồng các lớp lên nhau
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // LỚP 1 (Dưới cùng): Hình to hơn, màu mờ hơn, xoay XUÔI chiều kim đồng hồ
+                  AnimatedBuilder(
+                    animation: _rotateController,
+                    builder: (context, child) {
+                      return Transform.rotate(
+                        angle:
+                            _rotateController.value * 2 * math.pi, // Xoay xuôi
+                        child: Container(
+                          width: 190,
+                          height: 190,
+                          decoration: BoxDecoration(
+                            color: colors.primary.withOpacity(0.35),
+                            // Vẫn giữ nguyên hình dạng bất đối xứng của bạn
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(80),
+                              topRight: Radius.circular(80),
+                              bottomLeft: Radius.circular(60),
+                              bottomRight: Radius.circular(100),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+
+                  // LỚP 2 (Ở giữa): Kích thước chuẩn, màu đậm, xoay NGƯỢC chiều kim đồng hồ
+                  AnimatedBuilder(
+                    animation: _rotateController,
+                    builder: (context, child) {
+                      return Transform.rotate(
+                        angle:
+                            -_rotateController.value *
+                            2 *
+                            math.pi, // Dấu trừ (-) để xoay ngược
+                        child: Container(
+                          width: 175,
+                          height: 175,
+                          decoration: BoxDecoration(
+                            color: colors.primary,
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(80),
+                              topRight: Radius.circular(80),
+                              bottomLeft: Radius.circular(60),
+                              bottomRight: Radius.circular(100),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: colors.primary.withOpacity(0.5),
+                                blurRadius: 20,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+
+                  // LỚP 3 (Trên cùng): Nội dung chữ và icon. Nằm yên hoàn toàn, không bị xoay!
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.nightlight_round,
+                        color: colors.onPrimary,
+                        size: 32,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Start Sleep',
+                        style: TextStyle(
+                          color: colors.onPrimary,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'TAP TO DRIFT AWAY',
+                        style: TextStyle(
+                          color: colors.onPrimary.withOpacity(0.8),
+                          fontSize: 9,
+                          letterSpacing: 1.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+        Text(
+          '"Rest is the cornerstone of growth."',
+          style: TextStyle(
+            color: colors.outline,
+            fontStyle: FontStyle.italic,
+            fontSize: 14,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionTitle(String title, ColorScheme colors) {
+    return Text(
+      title,
+      style: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w800,
+        letterSpacing: 1.5,
+        color: colors.outline,
+      ),
+    );
+  }
+
+  Widget _buildQuickStats(ColorScheme colors) {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildStatBox(
+            Icons.nightlight_outlined,
+            'Duration',
+            '7h 20m',
+            colors,
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildStatBox(Icons.auto_awesome, 'Score', '85/100', colors),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatBox(
+    IconData icon,
+    String title,
+    String value,
+    ColorScheme colors,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? colors.surfaceContainerHighest
+            : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: colors.onSurface.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              'Chào mừng bạn đến với Sleeping App!',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 20, color: colors.primary),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  color: colors.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: colors.onSurface,
             ),
-            const SizedBox(height: 20),
-            BlocBuilder<AuthBloc, AuthState>(
-              builder: (context, state) {
-                if (state is AuthAuthenticated) {
-                  return Text('User ID: ${state.userId}');
-                }
-                return const Text('Đang tải thông tin...');
-              },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStreakCard(ColorScheme colors) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: colors.secondaryContainer,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: colors.onSecondary.withOpacity(0.5),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.local_fire_department_outlined,
+              color: colors.onSecondaryContainer,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '7 Day Streak',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: colors.onSecondaryContainer,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colors.primaryContainer,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'LEVEL 2',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: colors.onPrimaryContainer,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  "You're on a roll! Keep it up for a healthier cycle.",
+                  style: TextStyle(
+                    color: colors.onSecondaryContainer.withOpacity(0.8),
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSleepChart(ColorScheme colors) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? colors.surfaceContainerHighest
+            : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: colors.onSurface.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Sleep Stages',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: colors.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Good Quality',
+                    style: TextStyle(
+                      color: colors.onSurfaceVariant,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: colors.secondaryContainer,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  '+5% VS AVG',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: colors.onSecondaryContainer,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 30),
+          SizedBox(
+            height: 120,
+            child: CustomPaint(
+              size: const Size(double.infinity, 120),
+              painter: SmoothChartPainter(chartColor: colors.primary),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '10pm',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: colors.outline,
+                ),
+              ),
+              Text(
+                '2am',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: colors.outline,
+                ),
+              ),
+              Text(
+                '6am',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: colors.outline,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomStatsRow(ColorScheme colors) {
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? colors.surfaceContainerHighest
+                  : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: colors.onSurface.withOpacity(0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Morning Mood',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: colors.onSurfaceVariant,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    const Text('😌', style: TextStyle(fontSize: 24)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Refreshed',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: colors.onSurface,
+                          fontSize: 15,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? colors.surfaceContainerHighest
+                  : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: colors.onSurface.withOpacity(0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Next Alarm',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: colors.onSurfaceVariant,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(Icons.alarm, color: colors.onSurface, size: 24),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '06:30 AM',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: colors.onSurface,
+                          fontSize: 15,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCustomBottomNav(ColorScheme colors) {
+    final List<Map<String, dynamic>> navItems = [
+      {'icon': Icons.home_outlined, 'activeIcon': Icons.home, 'label': 'Home'},
+      {
+        'icon': Icons.alarm_outlined,
+        'activeIcon': Icons.alarm,
+        'label': 'Alarms',
+      },
+      {
+        'icon': Icons.nature_people_outlined,
+        'activeIcon': Icons.nature_people,
+        'label': 'Sounds',
+      },
+      {
+        'icon': Icons.show_chart_outlined,
+        'activeIcon': Icons.show_chart,
+        'label': 'Stats',
+      },
+    ];
+
+    return SafeArea(
+      child: Container(
+        height: 72,
+        margin: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(40),
+          boxShadow: [
+            BoxShadow(
+              color: colors.onSurface.withOpacity(0.08),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
             ),
           ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(40),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              decoration: BoxDecoration(
+                color: colors.surface.withOpacity(0.65),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.2),
+                  width: 1.2,
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: List.generate(navItems.length, (index) {
+                  final isActive = _selectedIndex == index;
+                  return Expanded(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        setState(() {
+                          _selectedIndex = index;
+                        });
+                      },
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 250),
+                            curve: Curves.easeOutCubic,
+                            width: isActive ? 48 : 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: isActive
+                                  ? colors.primaryContainer.withOpacity(0.8)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Center(
+                              child: Icon(
+                                isActive
+                                    ? navItems[index]['activeIcon']
+                                    : navItems[index]['icon'],
+                                color: isActive
+                                    ? colors.onPrimaryContainer
+                                    : colors.outline,
+                                size: 22,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          AnimatedDefaultTextStyle(
+                            duration: const Duration(milliseconds: 250),
+                            style: TextStyle(
+                              color: isActive
+                                  ? colors.onSurface
+                                  : colors.outline,
+                              fontSize: 10,
+                              fontWeight: isActive
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                            ),
+                            child: Text(
+                              navItems[index]['label'],
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+              ),
+            ),
+          ),
         ),
       ),
     );
   }
+}
+
+class SmoothChartPainter extends CustomPainter {
+  final Color chartColor;
+  SmoothChartPainter({required this.chartColor});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = chartColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final path = Path();
+    final w = size.width;
+    final h = size.height;
+
+    path.moveTo(0, h * 0.85);
+    path.cubicTo(w * 0.05, h * 0.85, w * 0.08, h * 0.2, w * 0.15, h * 0.2);
+    path.cubicTo(w * 0.2, h * 0.2, w * 0.22, h * 0.3, w * 0.26, h * 0.3);
+    path.cubicTo(w * 0.3, h * 0.3, w * 0.32, h * 0.8, w * 0.38, h * 0.8);
+    path.cubicTo(w * 0.44, h * 0.8, w * 0.46, h * 0.25, w * 0.52, h * 0.25);
+    path.cubicTo(w * 0.58, h * 0.25, w * 0.6, h * 0.85, w * 0.66, h * 0.85);
+    path.cubicTo(w * 0.72, h * 0.85, w * 0.74, h * 0.4, w * 0.8, h * 0.4);
+    path.cubicTo(w * 0.85, h * 0.4, w * 0.86, h * 0.9, w * 0.9, h * 0.9);
+    path.cubicTo(w * 0.94, h * 0.9, w * 0.95, h * 0.1, w * 0.98, h * 0.1);
+    path.quadraticBezierTo(w * 0.99, h * 0.6, w, h * 0.7);
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
