@@ -6,6 +6,7 @@ import 'package:sleeping_app_flutter/presentation/home/pages/home_page.dart';
 
 import 'core/theme/app_colors.dart';
 import 'core/theme/app_typography.dart';
+import 'core/theme/theme_cubit.dart';
 import 'data/repositories/auth_repository.dart';
 import 'firebase_options.dart';
 import 'presentation/auth/bloc/auth_bloc.dart';
@@ -37,41 +38,50 @@ class SleepingApp extends StatelessWidget {
               authRepository: context.read<AuthRepository>(),
             )..add(AuthCheckRequested()),
           ),
+          BlocProvider(create: (context) => ThemeCubit()),
         ],
-        child: MaterialApp(
-          title: 'Organic Sleep',
-          debugShowCheckedModeBanner: false,
-          theme: ThemeData(
-            useMaterial3: true,
-            colorScheme: AppColors.lightColorScheme,
-            scaffoldBackgroundColor: AppColors.lightColorScheme.surface,
-            textTheme: AppTypography.lightTextTheme,
-          ),
-          darkTheme: ThemeData(
-            useMaterial3: true,
-            colorScheme: AppColors.darkColorScheme,
-            scaffoldBackgroundColor: AppColors.darkColorScheme.surface,
-            textTheme: AppTypography.darkTextTheme,
-          ),
-          themeMode: ThemeMode.light,
-          home: BlocBuilder<AuthBloc, AuthState>(
-            builder: (context, state) {
-              if (state is AuthAuthenticated) {
-                return const HomePage();
-              } else if (state is AuthUnauthenticated ||
-                  state is AuthFailure ||
-                  state is AuthInitial ||
-                  state is AuthLoading ||
-                  state is AuthUnauthenticated) {
-                return const LoginPage();
-              }
-              return const Scaffold(
-                body: Center(
-                  child: CircularProgressIndicator(),
-                ),
-              );
-            },
-          ),
+        // ĐÃ SỬA Ở ĐÂY: Thêm BlocBuilder để lắng nghe thay đổi từ ThemeCubit
+        child: BlocBuilder<ThemeCubit, ThemeMode>(
+          builder: (context, themeMode) {
+            return MaterialApp(
+              title: 'Organic Sleep',
+              debugShowCheckedModeBanner: false,
+              theme: ThemeData(
+                useMaterial3: true,
+                colorScheme: AppColors.lightColorScheme,
+                scaffoldBackgroundColor: AppColors.lightColorScheme.surface,
+                textTheme: AppTypography.lightTextTheme,
+              ),
+              darkTheme: ThemeData(
+                useMaterial3: true,
+                colorScheme: AppColors.darkColorScheme,
+                scaffoldBackgroundColor: AppColors.darkColorScheme.surface,
+                textTheme: AppTypography.darkTextTheme,
+              ),
+
+              // ĐÃ SỬA Ở ĐÂY: Truyền biến themeMode vào thay vì gán cứng ThemeMode.light
+              themeMode: themeMode,
+
+              home: BlocBuilder<AuthBloc, AuthState>(
+                builder: (context, state) {
+                  if (state is AuthAuthenticated) {
+                    return const HomePage();
+                  } else if (state is AuthUnauthenticated ||
+                      state is AuthFailure ||
+                      state is AuthInitial ||
+                      state is AuthLoading ||
+                      state is AuthUnauthenticated) {
+                    return const LoginPage();
+                  }
+                  return const Scaffold(
+                    body: Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  );
+                },
+              ),
+            );
+          },
         ),
       ),
     );
