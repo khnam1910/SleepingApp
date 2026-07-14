@@ -1,4 +1,4 @@
-import 'dart:math' as math; // Thêm thư viện toán học để xoay hình
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/theme/theme_cubit.dart';
 import '../../auth/bloc/auth_bloc.dart';
+import '../widgets/sleep_cycle_bottom_sheet.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -16,19 +17,17 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage>
     with SingleTickerProviderStateMixin {
-  int _selectedIndex = 0;
+  // ĐÃ XÓA BIẾN _selectedIndex Ở ĐÂY[cite: 1]
 
-  // Đổi tên biến cho phù hợp với hiệu ứng xoay tròn
   late AnimationController _rotateController;
 
   @override
   void initState() {
     super.initState();
-    // Khởi tạo bộ đếm nhịp xoay: Xoay 1 vòng mất 10 giây (Rất chậm và thư giãn)
     _rotateController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 10),
-    )..repeat(); // repeat() giúp hình xoay liên tục không bao giờ dừng
+    )..repeat();
   }
 
   @override
@@ -57,7 +56,7 @@ class _HomePageState extends State<HomePage>
           children: [
             _buildGreeting(colors),
             const SizedBox(height: 30),
-            _buildStartSleepHero(colors), // Giao diện nút xoay được gắn ở đây
+            _buildStartSleepHero(colors),
             const SizedBox(height: 40),
             _buildSectionTitle("LAST NIGHT'S SLEEP", colors),
             const SizedBox(height: 16),
@@ -68,11 +67,23 @@ class _HomePageState extends State<HomePage>
             _buildSleepChart(colors),
             const SizedBox(height: 16),
             _buildBottomStatsRow(colors),
+            // Chừa một khoảng trống lớn (120) ở cuối để không bị Bottom Nav che mất[cite: 1]
             const SizedBox(height: 120),
           ],
         ),
       ),
-      bottomNavigationBar: _buildCustomBottomNav(colors),
+      // ĐÃ XÓA THUỘC TÍNH bottomNavigationBar Ở ĐÂY[cite: 1]
+    );
+  }
+
+  void _showSleepConfirmation(BuildContext context, ColorScheme colors) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (BuildContext context) {
+        return SleepCycleBottomSheet(colors: colors);
+      },
     );
   }
 
@@ -165,35 +176,30 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  // CẬP NHẬT: NÚT START SLEEP VỚI 2 LỚP XOAY TRÒN
   Widget _buildStartSleepHero(ColorScheme colors) {
     return Column(
       children: [
         Center(
           child: GestureDetector(
             onTap: () {
-              print("Bắt đầu ngủ");
+              _showSleepConfirmation(context, colors);
             },
             child: SizedBox(
               width: 200,
               height: 200,
-              // Stack giúp chúng ta xếp chồng các lớp lên nhau
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // LỚP 1 (Dưới cùng): Hình to hơn, màu mờ hơn, xoay XUÔI chiều kim đồng hồ
                   AnimatedBuilder(
                     animation: _rotateController,
                     builder: (context, child) {
                       return Transform.rotate(
-                        angle:
-                            _rotateController.value * 2 * math.pi, // Xoay xuôi
+                        angle: _rotateController.value * 2 * math.pi,
                         child: Container(
                           width: 190,
                           height: 190,
                           decoration: BoxDecoration(
                             color: colors.primary.withOpacity(0.35),
-                            // Vẫn giữ nguyên hình dạng bất đối xứng của bạn
                             borderRadius: const BorderRadius.only(
                               topLeft: Radius.circular(80),
                               topRight: Radius.circular(80),
@@ -206,15 +212,11 @@ class _HomePageState extends State<HomePage>
                     },
                   ),
 
-                  // LỚP 2 (Ở giữa): Kích thước chuẩn, màu đậm, xoay NGƯỢC chiều kim đồng hồ
                   AnimatedBuilder(
                     animation: _rotateController,
                     builder: (context, child) {
                       return Transform.rotate(
-                        angle:
-                            -_rotateController.value *
-                            2 *
-                            math.pi, // Dấu trừ (-) để xoay ngược
+                        angle: -_rotateController.value * 2 * math.pi,
                         child: Container(
                           width: 175,
                           height: 175,
@@ -239,7 +241,6 @@ class _HomePageState extends State<HomePage>
                     },
                   ),
 
-                  // LỚP 3 (Trên cùng): Nội dung chữ và icon. Nằm yên hoàn toàn, không bị xoay!
                   Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -656,122 +657,6 @@ class _HomePageState extends State<HomePage>
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildCustomBottomNav(ColorScheme colors) {
-    final List<Map<String, dynamic>> navItems = [
-      {'icon': Icons.home_outlined, 'activeIcon': Icons.home, 'label': 'Home'},
-      {
-        'icon': Icons.alarm_outlined,
-        'activeIcon': Icons.alarm,
-        'label': 'Alarms',
-      },
-      {
-        'icon': Icons.nature_people_outlined,
-        'activeIcon': Icons.nature_people,
-        'label': 'Sounds',
-      },
-      {
-        'icon': Icons.show_chart_outlined,
-        'activeIcon': Icons.show_chart,
-        'label': 'Stats',
-      },
-    ];
-
-    return SafeArea(
-      child: Container(
-        height: 72,
-        margin: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(40),
-          boxShadow: [
-            BoxShadow(
-              color: colors.onSurface.withOpacity(0.08),
-              blurRadius: 24,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(40),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              decoration: BoxDecoration(
-                color: colors.surface.withOpacity(0.65),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.2),
-                  width: 1.2,
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: List.generate(navItems.length, (index) {
-                  final isActive = _selectedIndex == index;
-                  return Expanded(
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () {
-                        setState(() {
-                          _selectedIndex = index;
-                        });
-                      },
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 250),
-                            curve: Curves.easeOutCubic,
-                            width: isActive ? 48 : 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: isActive
-                                  ? colors.primaryContainer.withOpacity(0.8)
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Center(
-                              child: Icon(
-                                isActive
-                                    ? navItems[index]['activeIcon']
-                                    : navItems[index]['icon'],
-                                color: isActive
-                                    ? colors.onPrimaryContainer
-                                    : colors.outline,
-                                size: 22,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          AnimatedDefaultTextStyle(
-                            duration: const Duration(milliseconds: 250),
-                            style: TextStyle(
-                              color: isActive
-                                  ? colors.onSurface
-                                  : colors.outline,
-                              fontSize: 10,
-                              fontWeight: isActive
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                            ),
-                            child: Text(
-                              navItems[index]['label'],
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

@@ -2,7 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sleeping_app_flutter/presentation/auth/pages/login.dart';
-import 'package:sleeping_app_flutter/presentation/home/pages/home_page.dart';
+import 'package:sleeping_app_flutter/presentation/home/pages/main_layout.dart';
 
 import 'core/theme/app_colors.dart';
 import 'core/theme/app_typography.dart';
@@ -65,7 +65,7 @@ class SleepingApp extends StatelessWidget {
               home: BlocBuilder<AuthBloc, AuthState>(
                 builder: (context, state) {
                   if (state is AuthAuthenticated) {
-                    return const HomePage();
+                    return const MainLayout();
                   } else if (state is AuthUnauthenticated ||
                       state is AuthFailure ||
                       state is AuthInitial ||
