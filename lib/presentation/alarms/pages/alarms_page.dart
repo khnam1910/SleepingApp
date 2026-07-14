@@ -1,10 +1,10 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_bloc/flutter_bloc.dart'; // Vẫn giữ lại cho ThemeCubit
+import 'package:sleeping_app_flutter/presentation/alarms/pages/set_alarm_page.dart';
 
 import '../../../core/theme/theme_cubit.dart';
-import '../../auth/bloc/auth_bloc.dart';
 import '../../global_widgets/shared_sleep_widgets.dart';
 
 class AlarmsPage extends StatefulWidget {
@@ -27,9 +27,9 @@ class _AlarmsPageState extends State<AlarmsPage> {
       backgroundColor: colors.surface,
       appBar: _buildAppBar(context, colors),
 
-      // 1. ĐÃ BỎ STACK, CHỈ CÒN SINGLE_CHILD_SCROLL_VIEW
       body: SingleChildScrollView(
         padding: EdgeInsets.only(
+          // Giữ nguyên padding top để nội dung trượt êm ái dưới thanh AppBar kính mờ
           top: MediaQuery.of(context).padding.top + kToolbarHeight + 10,
           left: 24,
           right: 24,
@@ -37,14 +37,14 @@ class _AlarmsPageState extends State<AlarmsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildGreeting(colors),
-            const SizedBox(height: 32),
+            // ĐÃ XÓA _buildGreeting(colors) Ở ĐÂY
 
+            // --- KHU VỰC BÁO THỨC ĐÃ LƯU & NÚT THÊM MỚI ---
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Your Schedules',
+                  'Lịch trình của bạn',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -52,7 +52,7 @@ class _AlarmsPageState extends State<AlarmsPage> {
                   ),
                 ),
                 Text(
-                  'View All',
+                  'Xem tất cả',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -70,27 +70,36 @@ class _AlarmsPageState extends State<AlarmsPage> {
                 clipBehavior: Clip.none,
                 children: [
                   SavedAlarmCard(
-                    title: 'Workdays',
+                    title: 'Ngày thường',
                     time: '06:30',
-                    amPm: 'AM',
-                    days: 'Mon - Fri',
+                    amPm: 'SA',
+                    days: 'T2 - T6',
                     isActive: true,
                     onToggle: (val) {},
                     colors: colors,
                   ),
                   const SizedBox(width: 16),
                   SavedAlarmCard(
-                    title: 'Weekend',
+                    title: 'Cuối tuần',
                     time: '08:00',
-                    amPm: 'AM',
-                    days: 'Sat - Sun',
+                    amPm: 'SA',
+                    days: 'T7 - CN',
                     isActive: false,
                     onToggle: (val) {},
                     colors: colors,
                   ),
                   const SizedBox(width: 16),
+
                   GestureDetector(
-                    onTap: () {},
+                    // 💡 ĐÃ SỬA Ở ĐÂY: Thêm lệnh Navigator.push
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SetAlarmPage(),
+                        ),
+                      );
+                    },
                     child: Container(
                       width: 100,
                       decoration: BoxDecoration(
@@ -112,7 +121,7 @@ class _AlarmsPageState extends State<AlarmsPage> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'New',
+                            'Thêm mới',
                             style: TextStyle(
                               color: colors.outline,
                               fontSize: 12,
@@ -128,19 +137,21 @@ class _AlarmsPageState extends State<AlarmsPage> {
             ),
             const SizedBox(height: 32),
 
+            // --- THẺ KIẾN THỨC MÁY TÍNH CHU KỲ ---
             InfoBannerCard(
-              title: 'The 90-Minute Rule',
+              title: 'Quy tắc 90 Phút',
               description:
-                  'Humans sleep in cycles of roughly 90 minutes. Waking up in the middle of a cycle often leaves you feeling groggy, while waking at the end of a cycle leaves you refreshed.',
-              highlightText: 'Aim for 5-6 cycles for optimal recovery.',
+                  'Cơ thể người ngủ theo các chu kỳ dài khoảng 90 phút. Việc thức giấc giữa chừng thường khiến bạn lờ đờ, trong khi thức dậy vào cuối chu kỳ sẽ giúp cơ thể tỉnh táo và sảng khoái.',
+              highlightText:
+                  'Mục tiêu lý tưởng là 5-6 chu kỳ để phục hồi tốt nhất.',
               icon: Icons.auto_awesome,
               colors: colors,
             ),
             const SizedBox(height: 24),
 
             CustomSegmentedToggle(
-              leftText: 'I want to wake\nup at...',
-              rightText: "I'm going to\nbed at...",
+              leftText: 'Tôi muốn thức\ndậy lúc...',
+              rightText: 'Tôi sẽ đi\nngủ lúc...',
               selectedIndex: _selectedToggleIndex,
               onChanged: (index) {
                 setState(() => _selectedToggleIndex = index);
@@ -165,7 +176,7 @@ class _AlarmsPageState extends State<AlarmsPage> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: Text(
-                      '07:00 AM',
+                      '07:00 SA',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -187,7 +198,7 @@ class _AlarmsPageState extends State<AlarmsPage> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
-                  'Calculated Cycles',
+                  'Tính toán chu kỳ',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -205,7 +216,7 @@ class _AlarmsPageState extends State<AlarmsPage> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    'SUGGESTED',
+                    'GỢI Ý',
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
@@ -218,9 +229,10 @@ class _AlarmsPageState extends State<AlarmsPage> {
             ),
             const SizedBox(height: 16),
 
+            // --- DANH SÁCH GỢI Ý CHU KỲ ---
             SleepCycleCard(
-              wakeTime: '06:30 AM',
-              duration: '7h 30m',
+              wakeTime: '06:30 SA',
+              duration: '7h 30p',
               cycles: 5,
               batteryBars: 3,
               isHighlighted: true,
@@ -228,8 +240,8 @@ class _AlarmsPageState extends State<AlarmsPage> {
             ),
             const SizedBox(height: 12),
             SleepCycleCard(
-              wakeTime: '08:00 AM',
-              duration: '9h 00m',
+              wakeTime: '08:00 SA',
+              duration: '9h 00p',
               cycles: 6,
               batteryBars: 4,
               isHighlighted: false,
@@ -237,27 +249,17 @@ class _AlarmsPageState extends State<AlarmsPage> {
             ),
             const SizedBox(height: 12),
             SleepCycleCard(
-              wakeTime: '05:00 AM',
-              duration: '6h 00m',
+              wakeTime: '05:00 SA',
+              duration: '6h 00p',
               cycles: 4,
               batteryBars: 2,
               isHighlighted: false,
               colors: colors,
             ),
-            const SizedBox(height: 16),
 
-            DashedOutlineButton(
-              icon: Icons.alarm_add,
-              title: 'Custom Alarm',
-              subtitle: 'Set your own recurring wake-up\nwindow',
-              onTap: () {},
-              colors: colors,
-            ),
             const SizedBox(height: 32),
 
-            // ==============================================
-            // 2. NÚT APPLY ĐÃ TRỞ VỀ DẠNG BÌNH THƯỜNG (KHÔNG LƠ LỬNG)
-            // ==============================================
+            // --- NÚT APPLY TÍNH TOÁN ---
             SizedBox(
               width: double.infinity,
               height: 56,
@@ -265,7 +267,7 @@ class _AlarmsPageState extends State<AlarmsPage> {
                 onPressed: () {},
                 icon: const Icon(Icons.check_circle_outline, size: 20),
                 label: const Text(
-                  'Apply Sleep Schedule',
+                  'Áp dụng lịch ngủ',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 style: ElevatedButton.styleFrom(
@@ -281,7 +283,7 @@ class _AlarmsPageState extends State<AlarmsPage> {
             const SizedBox(height: 12),
             Center(
               child: Text(
-                'These cycles account for the average 15\nminutes it takes to fall asleep.',
+                'Các chu kỳ này đã bao gồm trung bình\n15 phút để chìm vào giấc ngủ.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: colors.outline,
@@ -291,9 +293,6 @@ class _AlarmsPageState extends State<AlarmsPage> {
               ),
             ),
 
-            // 3. KHOẢNG TRỐNG CHỐNG CHE KHUẤT
-            // Đây là mấu chốt để khi bạn cuộn xuống tận cùng, nút Apply sẽ được đẩy
-            // lên cao hơn thanh Bottom Navigation Bar, không bao giờ bị che nữa!
             const SizedBox(height: 120),
           ],
         ),
@@ -302,7 +301,7 @@ class _AlarmsPageState extends State<AlarmsPage> {
   }
 
   // ==========================================
-  // CÁC HÀM XÂY DỰNG APPBAR & GREETING TỪ TRANG HOME
+  // HÀM XÂY DỰNG APPBAR TỪ TRANG HOME (ĐÃ XÓA HÀM _buildGreeting)
   // ==========================================
 
   AppBar _buildAppBar(BuildContext context, ColorScheme colors) {
@@ -354,39 +353,6 @@ class _AlarmsPageState extends State<AlarmsPage> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildGreeting(ColorScheme colors) {
-    return BlocBuilder<AuthBloc, AuthState>(
-      builder: (context, state) {
-        String subtitleText = 'Đang tải thông tin...';
-        if (state is AuthAuthenticated) {
-          final shortId = state.userId.length > 8
-              ? '${state.userId.substring(0, 8)}...'
-              : state.userId;
-          subtitleText = 'User ID: $shortId';
-        }
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Lịch báo thức',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: colors.onSurface,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              subtitleText,
-              style: TextStyle(fontSize: 15, color: colors.onSurfaceVariant),
-            ),
-          ],
-        );
-      },
     );
   }
 }
