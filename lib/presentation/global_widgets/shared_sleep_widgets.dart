@@ -491,12 +491,13 @@ class SegmentedBatteryIcon extends StatelessWidget {
 }
 
 // ==========================================
-// 6. THẺ BÁO THỨC ĐÃ LƯU (SAVED ALARM CARD)
+// 6. THẺ LỊCH TRÌNH ĐÃ LƯU (BALANCED LIST TILE)
 // ==========================================
 class SavedAlarmCard extends StatelessWidget {
   final String title;
-  final String time;
-  final String amPm;
+  final String wakeTime;
+  final String bedTime;
+  final String duration;
   final String days;
   final bool isActive;
   final ValueChanged<bool> onToggle;
@@ -505,8 +506,9 @@ class SavedAlarmCard extends StatelessWidget {
   const SavedAlarmCard({
     super.key,
     required this.title,
-    required this.time,
-    required this.amPm,
+    required this.wakeTime,
+    required this.bedTime,
+    required this.duration,
     required this.days,
     required this.isActive,
     required this.onToggle,
@@ -516,95 +518,103 @@ class SavedAlarmCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 160, // Khóa chiều rộng để tạo thành thẻ cuộn ngang
-      padding: const EdgeInsets.all(16),
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
+      // 💡 TĂNG PADDING DỌC (từ 14 lên 20) ĐỂ THẺ "DỄ THỞ" HƠN
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       decoration: BoxDecoration(
         color: isActive
             ? colors.primaryContainer.withOpacity(0.8)
             : colors.surfaceContainerHighest.withOpacity(0.3),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: isActive
-              ? colors.primary.withOpacity(0.5)
-              : colors.outlineVariant.withOpacity(0.3),
-          width: 1.5,
-        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        crossAxisAlignment:
+            CrossAxisAlignment.start, // Căn mọi thứ lên sát trần
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Icon(
-                Icons.alarm,
-                color: isActive ? colors.onPrimaryContainer : colors.outline,
-                size: 20,
-              ),
-              // Nút bật/tắt (Switch) nhỏ gọn
-              SizedBox(
-                height: 24,
-                width: 36,
-                child: Transform.scale(
-                  scale: 0.7,
-                  child: Switch(
-                    value: isActive,
-                    onChanged: onToggle,
-                    activeColor: colors.primary,
+          // --- CỘT TRÁI ---
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 💡 ĐƯA TIÊU ĐỀ LÊN TRÊN ĐỂ KHÔNG BỊ CHÈN ÉP CHỮ
+                Text(
+                  title.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                    color: isActive ? colors.primary : colors.outline,
                   ),
                 ),
-              ),
-            ],
-          ),
-          const Spacer(),
-          Text(
-            title,
-            style: TextStyle(
-              color: isActive
-                  ? colors.onPrimaryContainer
-                  : colors.onSurfaceVariant,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+                const SizedBox(height: 6),
+
+                // Giờ thức dậy lấy lại phong độ (To, mỏng, thanh lịch)
+                Text(
+                  wakeTime,
+                  style: TextStyle(
+                    fontSize: 42,
+                    fontWeight: FontWeight.w300,
+                    color: isActive
+                        ? colors.onPrimaryContainer
+                        : colors.onSurface,
+                    letterSpacing: -1.0,
+                    height: 1.0,
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                Text(
+                  days,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: isActive
+                        ? colors.onPrimaryContainer.withOpacity(0.7)
+                        : colors.outline,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 4),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
+
+          // --- CỘT PHẢI ---
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
-                time,
-                style: TextStyle(
-                  color: isActive
-                      ? colors.onPrimaryContainer
-                      : colors.onSurface,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
+              Transform.scale(
+                scale: 0.85, // Nhả scale ra một chút cho nút bớt cụt lủn
+                alignment: Alignment.centerRight,
+                child: Switch(
+                  value: isActive,
+                  onChanged: onToggle,
+                  activeColor: colors.primary,
                 ),
               ),
-              const SizedBox(width: 4),
-              Text(
-                amPm,
-                style: TextStyle(
-                  color: isActive
-                      ? colors.onPrimaryContainer
-                      : colors.onSurface,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
+
+              // 💡 Đẩy dòng thông tin giờ ngủ xuống dưới cùng cho cân đối với cột trái
+              const SizedBox(height: 24),
+
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.bedtime_rounded,
+                    size: 14,
+                    color: isActive ? colors.primary : colors.outline,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '$bedTime • $duration',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: isActive ? colors.primary : colors.outline,
+                    ),
+                  ),
+                ],
               ),
             ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            days,
-            style: TextStyle(
-              color: isActive
-                  ? colors.onPrimaryContainer.withOpacity(0.8)
-                  : colors.outline,
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
-            ),
           ),
         ],
       ),

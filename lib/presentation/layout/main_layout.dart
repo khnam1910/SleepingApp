@@ -2,9 +2,9 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
-import '../../alarms/pages/alarms_page.dart';
+import '../alarms/pages/alarms_page.dart';
 // Nhớ import các màn hình của bạn vào đây nhé
-import 'home_page.dart';
+import '../home/pages/home_page.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
