@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 // 1. THẺ THÔNG TIN CHU KỲ (ĐÃ TÍCH HỢP PIN 4 NẤC)
 // ==========================================
 class SleepCycleCard extends StatelessWidget {
+  final String timeLabel;
   final String wakeTime;
   final String duration;
   final int cycles;
@@ -15,6 +16,7 @@ class SleepCycleCard extends StatelessWidget {
 
   const SleepCycleCard({
     super.key,
+    required this.timeLabel,
     required this.wakeTime,
     required this.duration,
     required this.cycles,
@@ -68,16 +70,15 @@ class SleepCycleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Xác định màu sắc dựa trên sự nổi bật (Màu nhấn hoặc màu của Pin)
-    Color mainColor = isHighlighted ? colors.primary : colors.onSurface;
-    if (!isHighlighted) {
-      if (batteryBars == 4)
-        mainColor = const Color(0xFF3B82F6); // Xanh dương
-      else if (batteryBars == 3)
-        mainColor = const Color(0xFF10B981); // Xanh lá
-      else if (batteryBars == 2)
-        mainColor = const Color(0xFFF59E0B); // Cam
-      else
-        mainColor = const Color(0xFFEF4444); // Đỏ
+    Color batteryColor;
+    if (batteryBars >= 4) {
+      batteryColor = const Color(0xFF3B82F6); // 6 Chu kỳ -> Xanh dương
+    } else if (batteryBars == 3) {
+      batteryColor = const Color(0xFF10B981); // 5 Chu kỳ -> Xanh lá
+    } else if (batteryBars == 2) {
+      batteryColor = const Color(0xFFF59E0B); // 4 Chu kỳ -> Cam
+    } else {
+      batteryColor = const Color(0xFFEF4444); // 3 Chu kỳ -> Đỏ
     }
 
     return Container(
@@ -101,10 +102,10 @@ class SleepCycleCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Wake Up Time',
-                style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12),
+                timeLabel,
+                style: TextStyle(fontSize: 11, color: colors.outline),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Text(
                 wakeTime,
                 style: TextStyle(
@@ -115,7 +116,7 @@ class SleepCycleCard extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                'Duration',
+                'Thời lượng',
                 style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12),
               ),
               const SizedBox(height: 2),
@@ -133,15 +134,15 @@ class SleepCycleCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               // Hiển thị cục Pin thay cho chữ
-              _buildBatteryIcon(batteryBars, mainColor),
+              _buildBatteryIcon(batteryBars, batteryColor),
               const SizedBox(height: 24),
               Text(
-                'Cycles',
+                'Chu kỳ',
                 style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12),
               ),
               const SizedBox(height: 2),
               Text(
-                '$cycles Cycles',
+                '$cycles Chu kỳ',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,

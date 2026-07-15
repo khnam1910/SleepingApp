@@ -1,11 +1,14 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart'; // Vẫn giữ lại cho ThemeCubit
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:sleeping_app_flutter/presentation/alarms/bloc/alarms_bloc.dart';
 import 'package:sleeping_app_flutter/presentation/alarms/pages/set_alarm_page.dart';
 
 import '../../../core/theme/theme_cubit.dart';
 import '../../global_widgets/shared_sleep_widgets.dart';
+import '../bloc/alarms_state.dart';
+import '../widgets/samsung_time_picker.dart';
 
 class AlarmsPage extends StatefulWidget {
   const AlarmsPage({super.key});
@@ -16,13 +19,40 @@ class AlarmsPage extends StatefulWidget {
 
 class _AlarmsPageState extends State<AlarmsPage> {
   int _selectedToggleIndex = 0;
+  TimeOfDay _targetTime = const TimeOfDay(hour: 7, minute: 0);
+  Future<void> _selectTime(BuildContext context) async {
+    final colors = Theme.of(context).colorScheme;
 
-  // ==========================================
-  // HÀM MỞ BẢNG TRƯỢT THÔNG TIN QUY TẮC 90 PHÚT
-  // ==========================================
-  // ==========================================
-  // HÀM MỞ HỘP THOẠI NỔI LÀM MỜ NỀN (GLASSMORPHISM DIALOG)
-  // ==========================================
+    // Hiển thị Dialog tự thiết kế thay vì thư viện mặc định
+    final TimeOfDay? picked = await showDialog<TimeOfDay>(
+      context: context,
+      builder: (BuildContext context) {
+        return SamsungTimePickerDialog(
+          initialTime: _targetTime,
+          colors: colors,
+        );
+      },
+    );
+
+    if (picked != null && picked != _targetTime) {
+      setState(() {
+        _targetTime = picked;
+      });
+      if (mounted) {
+        context.read<AlarmsBloc>().calculateCycles(
+          picked,
+          _selectedToggleIndex,
+        );
+      }
+    }
+  }
+
+  String _formatTime(TimeOfDay time) {
+    final h = time.hour.toString().padLeft(2, '0');
+    final m = time.minute.toString().padLeft(2, '0');
+    return '$h:$m';
+  }
+
   void _show90MinRuleDialog(BuildContext context, ColorScheme colors) {
     // showDialog giúp hộp thoại nổi ở chính giữa màn hình
     showDialog(
@@ -265,7 +295,6 @@ class _AlarmsPageState extends State<AlarmsPage> {
               ],
             ),
 
-            // 💡 ĐÃ XÓA MorphingInfoCard VÀ THU HẸP KHOẢNG TRỐNG
             const SizedBox(height: 32),
 
             CustomSegmentedToggle(
@@ -274,171 +303,209 @@ class _AlarmsPageState extends State<AlarmsPage> {
               selectedIndex: _selectedToggleIndex,
               onChanged: (index) {
                 setState(() => _selectedToggleIndex = index);
+                // Nếu đã có kết quả tính toán trước đó, thì khi chuyển Tab sẽ tính lại luôn
+                final state = context.read<AlarmsBloc>().state;
+                if (state is AlarmsCalculated) {
+                  context.read<AlarmsBloc>().calculateCycles(
+                    state.targetTime,
+                    index,
+                  );
+                }
               },
               colors: colors,
             ),
             const SizedBox(height: 16),
 
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              decoration: BoxDecoration(
-                color: colors.primaryContainer.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.schedule,
-                    color: colors.onSurfaceVariant,
-                    size: 22,
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Text(
-                      '07:00',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: colors.onSurface,
+            // ✅ DÁN ĐOẠN BLOC BUILDER NÀY VÀO
+            BlocBuilder<AlarmsBloc, AlarmsState>(
+              builder: (context, state) {
+                bool hasCalculated = false;
+                List<dynamic> cycles = [];
+
+                if (state is AlarmsCalculated) {
+                  hasCalculated = true;
+                  cycles = state.cycles;
+                }
+
+                String cardTimeLabel = _selectedToggleIndex == 0
+                    ? 'Giờ đi ngủ'
+                    : 'Giờ thức dậy';
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // --- 1. NÚT CHỌN GIỜ LUÔN HIỆN ---
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => _selectTime(context),
+                        borderRadius: BorderRadius.circular(24),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 16,
+                          ),
+                          decoration: BoxDecoration(
+                            color: colors.primaryContainer.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(
+                              color: colors.outlineVariant.withOpacity(0.3),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.schedule,
+                                color: colors.onSurfaceVariant,
+                                size: 22,
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Text(
+                                  _formatTime(_targetTime),
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: colors.onSurface,
+                                  ),
+                                ),
+                              ),
+                              Icon(
+                                Icons.edit,
+                                color: colors.outline,
+                                size: 20,
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                  Icon(
-                    Icons.keyboard_arrow_down_rounded,
-                    color: colors.outline,
-                    size: 24,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
+                    const SizedBox(height: 32),
 
-            // 💡 ĐÃ THÊM NÚT BÓNG ĐÈN VÀO TIÊU ĐỀ
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(
-                  'Tính toán chu kỳ',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: colors.onSurface,
-                  ),
-                ),
-
-                const SizedBox(width: 8), // Khoảng cách nhỏ giữa chữ và nút
-                // 💡 NÚT BÓNG ĐÈN ĐÃ ĐƯỢC BỌC NỀN MỜ (TONAL BUTTON)
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () => _show90MinRuleDialog(context, colors),
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      padding: const EdgeInsets.all(
-                        8,
-                      ), // Tạo không gian nền xung quanh icon
-                      decoration: BoxDecoration(
-                        color: colors.primaryContainer.withOpacity(
-                          0.4,
-                        ), // Nền mờ tạo cảm giác "nút bấm"
-                        shape: BoxShape.circle,
+                    // --- 2. CHỈ HIỆN DANH SÁCH & NÚT LƯU KHI ĐÃ CÓ KẾT QUẢ ---
+                    if (hasCalculated) ...[
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Tính toán chu kỳ',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: colors.onSurface,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () =>
+                                  _show90MinRuleDialog(context, colors),
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: colors.primaryContainer.withOpacity(
+                                    0.4,
+                                  ),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.lightbulb_outline_rounded,
+                                  color: colors.primary,
+                                  size: 18,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colors.primaryContainer.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'GỢI Ý',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: colors.primary,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      child: Icon(
-                        Icons.lightbulb_outline_rounded,
-                        color: colors.primary,
-                        size: 18,
+                      const SizedBox(height: 16),
+
+                      // In ra các thẻ chu kỳ
+                      ...cycles.map((cycle) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12.0),
+                          child: SleepCycleCard(
+                            timeLabel: cardTimeLabel,
+                            wakeTime: _formatTime(cycle.time),
+                            duration: cycle.durationStr,
+                            cycles: cycle.cycles,
+                            batteryBars: cycle.batteryBars,
+                            isHighlighted: cycle.isOptimal,
+                            colors: colors,
+                          ),
+                        );
+                      }),
+                      const SizedBox(height: 32),
+
+                      // Nút Áp dụng
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            print(
+                              "Sẽ lưu mốc giờ: ${_formatTime(_targetTime)}",
+                            );
+                          },
+                          icon: const Icon(
+                            Icons.check_circle_outline,
+                            size: 20,
+                          ),
+                          label: const Text(
+                            'Áp dụng lịch ngủ',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: colors.primary,
+                            foregroundColor: colors.onPrimary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            elevation: 0,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                ),
-
-                const Spacer(), // Đẩy nhãn Gợi ý sang bên phải
-
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: colors.primaryContainer.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    'GỢI Ý',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: colors.primary,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // --- DANH SÁCH GỢI Ý CHU KỲ ---
-            SleepCycleCard(
-              wakeTime: '06:30',
-              duration: '7h 30p',
-              cycles: 5,
-              batteryBars: 3,
-              isHighlighted: true,
-              colors: colors,
-            ),
-            const SizedBox(height: 12),
-            SleepCycleCard(
-              wakeTime: '08:00',
-              duration: '9h 00p',
-              cycles: 6,
-              batteryBars: 4,
-              isHighlighted: false,
-              colors: colors,
-            ),
-            const SizedBox(height: 12),
-            SleepCycleCard(
-              wakeTime: '05:00',
-              duration: '6h 00p',
-              cycles: 4,
-              batteryBars: 2,
-              isHighlighted: false,
-              colors: colors,
-            ),
-
-            const SizedBox(height: 32),
-
-            // --- NÚT APPLY TÍNH TOÁN ---
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.check_circle_outline, size: 20),
-                label: const Text(
-                  'Áp dụng lịch ngủ',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: colors.primary,
-                  foregroundColor: colors.onPrimary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  elevation: 0,
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Center(
-              child: Text(
-                'Các chu kỳ này đã bao gồm trung bình\n15 phút để chìm vào giấc ngủ.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: colors.outline,
-                  fontSize: 11,
-                  height: 1.4,
-                ),
-              ),
+                      const SizedBox(height: 12),
+                      Center(
+                        child: Text(
+                          'Các chu kỳ này đã bao gồm trung bình\n15 phút để chìm vào giấc ngủ.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: colors.outline,
+                            fontSize: 11,
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                    ], // Kết thúc vùng if
+                  ],
+                );
+              },
             ),
 
             const SizedBox(height: 120),

@@ -1,9 +1,10 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../alarms/bloc/alarms_bloc.dart';
 import '../alarms/pages/alarms_page.dart';
-// Nhớ import các màn hình của bạn vào đây nhé
 import '../home/pages/home_page.dart';
 
 class MainLayout extends StatefulWidget {
@@ -19,7 +20,10 @@ class _MainLayoutState extends State<MainLayout> {
   // Danh sách 4 màn hình chính của App
   final List<Widget> _pages = [
     const HomePage(),
-    const AlarmsPage(),
+    BlocProvider(
+      create: (context) => AlarmsBloc(),
+      child: const AlarmsPage(),
+    ),
     const Center(
       child: Text('Sounds Page (Coming Soon)'),
     ), // Chỗ trống cho màn hình Sounds
@@ -88,8 +92,12 @@ class _MainLayoutState extends State<MainLayout> {
               decoration: BoxDecoration(
                 color: colors.surface.withOpacity(0.65),
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.2),
-                  width: 1.2,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.transparent
+                      : Colors.white.withOpacity(
+                          0.2,
+                        ),
+                  width: 1.0,
                 ),
               ),
               child: Row(
