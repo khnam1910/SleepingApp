@@ -47,28 +47,28 @@ class _SleepCycleBottomSheetState extends State<SleepCycleBottomSheet> {
     // 2. ĐÃ XÓA CÁC CHỮ MÔ TẢ KHỎI DATA
     _cycles = [
       SleepCycleData(
-        '08:00 AM',
+        '08:00',
         6,
         'Ngủ 9h 00m',
         const Color(0xFF3B82F6),
         4,
       ),
       SleepCycleData(
-        '06:30 AM',
+        '06:30',
         5,
         'Ngủ 7h 30m',
         const Color(0xFF10B981),
         3,
       ),
       SleepCycleData(
-        '05:00 AM',
+        '05:00',
         4,
         'Ngủ 6h 00m',
         const Color(0xFFF59E0B),
         2,
       ),
       SleepCycleData(
-        '03:30 AM',
+        '03:30',
         3,
         'Ngủ 4h 30m',
         const Color(0xFFEF4444),
