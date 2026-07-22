@@ -1,13 +1,15 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:sleeping_app_flutter/presentation/auth/pages/login.dart';
+import 'package:sleeping_app_flutter/presentation/auth/pages/login_page.dart';
 import 'package:sleeping_app_flutter/presentation/layout/main_layout.dart';
+import 'package:sleeping_app_flutter/presentation/profile/bloc/profile_bloc.dart';
 
 import 'core/theme/app_colors.dart';
 import 'core/theme/app_typography.dart';
 import 'core/theme/theme_cubit.dart';
 import 'data/repositories/auth_repository.dart';
+import 'data/repositories/users_repository.dart';
 import 'firebase_options.dart';
 import 'presentation/auth/bloc/auth_bloc.dart';
 
@@ -16,9 +18,6 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  // FirebaseAuth.instance.useAuthEmulator('10.0.2.2', 9099);
-  // FirebaseFirestore.instance.useFirestoreEmulator('10.0.2.2', 8080);
-  // FirebaseFunctions.instance.useFunctionsEmulator('10.0.2.2', 5001);
   runApp(const SleepingApp());
 }
 
@@ -30,17 +29,24 @@ class SleepingApp extends StatelessWidget {
     return MultiRepositoryProvider(
       providers: [
         RepositoryProvider(create: (context) => AuthRepository()),
+        RepositoryProvider(create: (context) => UserRepository()),
       ],
       child: MultiBlocProvider(
         providers: [
           BlocProvider(
-            create: (context) => AuthBloc(
-              authRepository: context.read<AuthRepository>(),
-            )..add(AuthCheckRequested()),
+            create: (context) =>
+                AuthBloc(
+                  authRepository: context.read<AuthRepository>(),
+                )..add(
+                  AuthCheckRequested(),
+                ), // Gọi sự kiện kiểm tra đăng nhập lúc app vừa mở
           ),
           BlocProvider(create: (context) => ThemeCubit()),
+          BlocProvider(
+            create: (context) =>
+                ProfileBloc(userRepository: context.read<UserRepository>()),
+          ),
         ],
-        // ĐÃ SỬA Ở ĐÂY: Thêm BlocBuilder để lắng nghe thay đổi từ ThemeCubit
         child: BlocBuilder<ThemeCubit, ThemeMode>(
           builder: (context, themeMode) {
             return MaterialApp(
@@ -58,21 +64,23 @@ class SleepingApp extends StatelessWidget {
                 scaffoldBackgroundColor: AppColors.darkColorScheme.surface,
                 textTheme: AppTypography.darkTextTheme,
               ),
-
-              // ĐÃ SỬA Ở ĐÂY: Truyền biến themeMode vào thay vì gán cứng ThemeMode.light
               themeMode: themeMode,
 
+              // ĐÃ SỬA LOGIC Ở ĐÂY
               home: BlocBuilder<AuthBloc, AuthState>(
                 builder: (context, state) {
+                  // 1. Nếu đã đăng nhập -> Vào app
                   if (state is AuthAuthenticated) {
                     return const MainLayout();
-                  } else if (state is AuthUnauthenticated ||
-                      state is AuthFailure ||
-                      state is AuthInitial ||
-                      state is AuthLoading ||
-                      state is AuthUnauthenticated) {
+                  }
+                  // 2. Nếu chưa đăng nhập hoặc đăng nhập lỗi -> Ra màn hình Login
+                  else if (state is AuthUnauthenticated ||
+                      state is AuthFailure) {
+                    // TẠM THỜI ẨN LOGIN PAGE ĐỂ TEST XEM LỖI CÓ PHẢI DO LOGIN PAGE KHÔNG
                     return const LoginPage();
                   }
+
+                  // 3. Nếu đang Initial hoặc Loading -> BẮT BUỘC phải hiện vòng xoay
                   return const Scaffold(
                     body: Center(
                       child: CircularProgressIndicator(),

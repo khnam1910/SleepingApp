@@ -69,6 +69,7 @@ class SleepCycleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     // Xác định màu sắc dựa trên sự nổi bật (Màu nhấn hoặc màu của Pin)
     Color batteryColor;
     if (batteryBars >= 4) {
@@ -83,17 +84,54 @@ class SleepCycleCard extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(20),
+
+      // decoration: BoxDecoration(
+      //   color: isHighlighted
+      //       ? colors.primaryContainer.withOpacity(0.4)
+      //       : colors.surfaceContainerHighest.withOpacity(0.3),
+      //   borderRadius: BorderRadius.circular(24),
+      //   border: Border.all(
+      //     color: isHighlighted
+      //         ? colors.primary.withOpacity(0.3)
+      //         : Colors.transparent,
+      //     width: 1.5,
+      //   ),
+      // ),
       decoration: BoxDecoration(
+        // Xử lý nền: Tối ưu màu mờ cho Dark Mode
         color: isHighlighted
-            ? colors.primaryContainer.withOpacity(0.4)
-            : colors.surfaceContainerHighest.withOpacity(0.3),
+            ? (isDark
+                  ? colors.primary.withOpacity(0.15)
+                  : colors.primaryContainer.withOpacity(0.7))
+            : (isDark
+                  ? colors.surfaceContainerHighest.withOpacity(0.2)
+                  : colors.surface),
+
         borderRadius: BorderRadius.circular(24),
+
+        // Xử lý viền: Bo viền màu nổi nếu được Highlight
         border: Border.all(
           color: isHighlighted
-              ? colors.primary.withOpacity(0.3)
-              : Colors.transparent,
-          width: 1.5,
+              ? colors.primary.withOpacity(
+                  isDark ? 0.8 : 1.0,
+                ) // Viền rực sáng trong đêm
+              : colors.outlineVariant.withOpacity(
+                  0.2,
+                ), // Viền mờ cho thẻ thường
+          width: isHighlighted ? 2.0 : 1.0, // Thẻ Highlight có viền dày gấp đôi
         ),
+
+        // Xử lý Glow Shadow: Tạo hiệu ứng "toả hào quang" trong Dark Mode
+        boxShadow: isHighlighted
+            ? [
+                BoxShadow(
+                  color: colors.primary.withOpacity(isDark ? 0.25 : 0.15),
+                  blurRadius: 20,
+                  spreadRadius: 2,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : [], // Thẻ thường không có bóng
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,

@@ -4,6 +4,8 @@
     <queries>
         <package android:name="com.google.android.gms" />
         <package android:name="com.google.android.gsf" />
+        <provider android:authorities="com.facebook.katana.provider.PlatformProvider" />
+        <package android:name="com.facebook.katana" />
     </queries>
     <application
         android:label="sleeping_app_flutter"

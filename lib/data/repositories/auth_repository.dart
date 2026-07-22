@@ -4,21 +4,62 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+// Đừng quên import UserModel của bạn vào đây
+import '../models/user_model.dart';
+
 class AuthRepository {
   final FirebaseAuth _firebaseAuth;
   final FirebaseFunctions _firebaseFunctions;
   final GoogleSignIn _googleSignIn;
   final FacebookAuth _facebookAuth;
-  // Constructor: Cho phép truyền instance từ ngoài vào, nếu không có sẽ lấy mặc định
+  final FirebaseFirestore _firestore;
+
   AuthRepository({
     FirebaseAuth? firebaseAuth,
     FirebaseFunctions? firebaseFunctions,
     GoogleSignIn? googleSignIn,
     FacebookAuth? facebookAuth,
+    FirebaseFirestore? firestore,
   }) : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
        _firebaseFunctions = firebaseFunctions ?? FirebaseFunctions.instance,
        _googleSignIn = googleSignIn ?? GoogleSignIn(),
-       _facebookAuth = facebookAuth ?? FacebookAuth.instance;
+       _facebookAuth = facebookAuth ?? FacebookAuth.instance,
+       _firestore = firestore ?? FirebaseFirestore.instance;
+
+  // 💡 ĐÃ THÊM: {String? customAvatar}
+  Future<void> _createUserDocumentIfNotExists(
+    User user, {
+    String? customAvatar,
+  }) async {
+    final userDoc = await _firestore.collection('users').doc(user.uid).get();
+
+    if (!userDoc.exists) {
+      final newUser = UserModel(
+        id: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        // 💡 Ưu tiên dùng customAvatar, nếu không có mới dùng của Firebase mặc định
+        avatarUrl: customAvatar ?? user.photoURL,
+        targetSleepMinutes: 480,
+      );
+
+      final userData = newUser.toJson();
+      userData['created_at'] = FieldValue.serverTimestamp();
+
+      await _firestore.collection('users').doc(user.uid).set(userData);
+    }
+    // (Tùy chọn) Cập nhật lại ảnh nếu user đã tồn tại nhưng có link ảnh thật mới
+    else if (customAvatar != null) {
+      await _firestore.collection('users').doc(user.uid).update({
+        'avatar_url':
+            customAvatar, // Nhớ dùng đúng tên key trên Firebase của bạn
+      });
+    }
+  }
+
+  // ==========================================
+  // CÁC HÀM XÁC THỰC
+  // ==========================================
 
   Future<UserCredential?> signIn({
     required String email,
@@ -44,13 +85,10 @@ class AuthRepository {
         password: password,
       );
       final user = userCredential.user;
-      if (user != null) {
-        final firestore = FirebaseFirestore.instance;
 
-        await firestore.collection('users').doc(user.uid).set({
-          'email': email,
-          'created_at': FieldValue.serverTimestamp(),
-        });
+      if (user != null) {
+        // 💡 SỬ DỤNG HÀM HELPER Ở ĐÂY
+        await _createUserDocumentIfNotExists(user);
       }
       return userCredential;
     } on FirebaseAuthException catch (e) {
@@ -60,13 +98,84 @@ class AuthRepository {
     }
   }
 
+  Future<UserCredential?> signInWithGoogle() async {
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return null;
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final userCredential = await _firebaseAuth.signInWithCredential(
+        credential,
+      );
+      final user = userCredential.user;
+
+      if (user != null) {
+        // 💡 SỬ DỤNG HÀM HELPER Ở ĐÂY
+        await _createUserDocumentIfNotExists(user);
+      }
+
+      return userCredential;
+    } on FirebaseAuthException catch (e) {
+      throw Exception(e.message);
+    } catch (e) {
+      throw Exception('Đăng nhập Google thất bại: ${e.toString()}');
+    }
+  }
+
+  Future<UserCredential?> signInWithFacebook() async {
+    try {
+      final LoginResult result = await _facebookAuth.login();
+      if (result.status != LoginStatus.success) return null;
+
+      final AccessToken accessToken = result.accessToken!;
+      final OAuthCredential credential = FacebookAuthProvider.credential(
+        accessToken.tokenString,
+      );
+
+      final userCredential = await _firebaseAuth.signInWithCredential(
+        credential,
+      );
+      final user = userCredential.user;
+
+      if (user != null) {
+        // ========================================================
+        // 💡 BẮT ĐẦU SỬA Ở ĐÂY: Lấy link ảnh xịn từ Facebook Auth
+        // ========================================================
+        String? realFbAvatar;
+        try {
+          // Xin Facebook cục data (chứa avatar xịn đã kèm token giải mã)
+          final userData = await _facebookAuth.getUserData();
+          // Trích xuất đường link
+          realFbAvatar = userData['picture']['data']['url'];
+        } catch (e) {
+          print("Không thể lấy ảnh Facebook xịn: $e");
+        }
+
+        // Truyền link ảnh xịn vào hàm lưu
+        await _createUserDocumentIfNotExists(user, customAvatar: realFbAvatar);
+        // ========================================================
+      }
+
+      return userCredential;
+    } on FirebaseAuthException catch (e) {
+      throw Exception(e.message);
+    } catch (e) {
+      throw Exception('Đăng nhập Facebook thất bại: ${e.toString()}');
+    }
+  }
+
   Future<void> sendOtp({required String email}) async {
     try {
       await _firebaseFunctions.httpsCallable('requestOtp').call({
         "email": email,
       });
     } on FirebaseFunctionsException catch (e) {
-      // Truyền thẳng mã lỗi hoặc thông báo từ server về
       throw Exception(e.details ?? e.message);
     } catch (e) {
       throw Exception('Không thể gửi mã: ${e.toString()}');
@@ -92,94 +201,24 @@ class AuthRepository {
     }
   }
 
-  Future<UserCredential?> signInWithGoogle() async {
-    try {
-      // Mở popup cho người dùng chọn tài khoản Google
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-
-      // Nếu người dùng bấm hủy (đóng popup)
-      if (googleUser == null) return null;
-
-      // Lấy thông tin xác thực
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-      final AuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      // Đăng nhập vào Firebase
-      final userCredential = await _firebaseAuth.signInWithCredential(
-        credential,
-      );
-
-      // Tùy chọn: Lưu thông tin user Google vào bảng 'users' trong Firestore
-      final user = userCredential.user;
-      if (user != null) {
-        final firestore = FirebaseFirestore.instance;
-        final userDoc = await firestore.collection('users').doc(user.uid).get();
-        // Chỉ lưu nếu đây là lần đầu người này đăng nhập
-        if (!userDoc.exists) {
-          await firestore.collection('users').doc(user.uid).set({
-            'email': user.email,
-            'created_at': FieldValue.serverTimestamp(),
-          });
-        }
-      }
-
-      return userCredential;
-    } on FirebaseAuthException catch (e) {
-      throw Exception(e.message);
-    } catch (e) {
-      throw Exception('Đăng nhập Google thất bại: ${e.toString()}');
-    }
-  }
-
-  Future<UserCredential?> signInWithFacebook() async {
-    try {
-      // Dùng biến _facebookAuth thay vì gọi FacebookAuth.instance
-      final LoginResult result = await _facebookAuth.login();
-
-      if (result.status != LoginStatus.success) {
-        return null;
-      }
-
-      final AccessToken accessToken = result.accessToken!;
-      final OAuthCredential credential = FacebookAuthProvider.credential(
-        accessToken.tokenString,
-      );
-
-      final userCredential = await _firebaseAuth.signInWithCredential(
-        credential,
-      );
-
-      final user = userCredential.user;
-      if (user != null) {
-        final firestore = FirebaseFirestore.instance;
-        final userDoc = await firestore.collection('users').doc(user.uid).get();
-
-        if (!userDoc.exists) {
-          await firestore.collection('users').doc(user.uid).set({
-            'email': user.email ?? '',
-            'created_at': FieldValue.serverTimestamp(),
-          });
-        }
-      }
-
-      return userCredential;
-    } on FirebaseAuthException catch (e) {
-      throw Exception(e.message);
-    } catch (e) {
-      throw Exception('Đăng nhập Facebook thất bại: ${e.toString()}');
-    }
-  }
-
-  // 5. THÊM HÀM ĐĂNG XUẤT TỔNG HỢP
   Future<void> signOut() async {
-    await Future.wait([
-      _googleSignIn.signOut(),
-      _facebookAuth.logOut(),
-      _firebaseAuth.signOut(),
-    ]);
+    try {
+      await _firebaseAuth.signOut();
+    } catch (e) {
+      print("Lỗi đăng xuất Firebase: $e");
+    }
+
+    try {
+      await _googleSignIn.signOut();
+      await _googleSignIn.disconnect();
+    } catch (e) {
+      print("Lỗi ngắt kết nối Google: $e");
+    }
+
+    try {
+      await _facebookAuth.logOut();
+    } catch (e) {
+      print("Lỗi đăng xuất Facebook: $e");
+    }
   }
 }

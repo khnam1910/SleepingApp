@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sleeping_app_flutter/presentation/alarms/bloc/alarms_bloc.dart';
 import 'package:sleeping_app_flutter/presentation/alarms/pages/set_alarm_page.dart';
+import 'package:sleeping_app_flutter/presentation/home/widgets/shared_app_bar.dart';
 
-import '../../../core/theme/theme_cubit.dart';
 import '../../global_widgets/shared_sleep_widgets.dart';
 import '../bloc/alarms_state.dart';
 import '../widgets/samsung_time_picker.dart';
@@ -189,7 +189,7 @@ class _AlarmsPageState extends State<AlarmsPage> {
       extendBody: true,
       extendBodyBehindAppBar: true,
       backgroundColor: colors.surface,
-      appBar: _buildAppBar(context, colors),
+      appBar: SharedAppBar(),
       body: SingleChildScrollView(
         padding: EdgeInsets.only(
           top: MediaQuery.of(context).padding.top + kToolbarHeight + 10,
@@ -512,58 +512,6 @@ class _AlarmsPageState extends State<AlarmsPage> {
           ],
         ),
       ),
-    );
-  }
-
-  AppBar _buildAppBar(BuildContext context, ColorScheme colors) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
-    return AppBar(
-      backgroundColor: colors.surface.withOpacity(0.7),
-      elevation: 0,
-      scrolledUnderElevation: 0,
-      flexibleSpace: ClipRRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-          child: Container(color: Colors.transparent),
-        ),
-      ),
-      centerTitle: true,
-      title: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: colors.primaryContainer.withOpacity(0.4),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Icon(Icons.eco, size: 24, color: colors.onPrimaryContainer),
-      ),
-      leading: Padding(
-        padding: const EdgeInsets.only(left: 16.0),
-        child: GestureDetector(
-          onTap: () {
-            print("Nhấn vào Avatar để mở Settings");
-          },
-          child: CircleAvatar(
-            backgroundColor: colors.outlineVariant,
-            backgroundImage: const NetworkImage('https://i.pravatar.cc/100'),
-          ),
-        ),
-      ),
-      actions: [
-        Padding(
-          padding: const EdgeInsets.only(right: 12.0),
-          child: IconButton(
-            icon: Icon(
-              isDarkMode ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-              color: colors.onSurface,
-            ),
-            onPressed: () {
-              context.read<ThemeCubit>().toggleTheme();
-            },
-          ),
-        ),
-      ],
     );
   }
 }

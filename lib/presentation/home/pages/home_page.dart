@@ -1,11 +1,13 @@
 import 'dart:math' as math;
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:sleeping_app_flutter/presentation/home/widgets/shared_app_bar.dart';
 
-import '../../../core/theme/theme_cubit.dart';
 import '../../auth/bloc/auth_bloc.dart';
+import '../../profile/bloc/profile_bloc.dart';
+import '../../profile/bloc/profile_event.dart';
+import '../../profile/bloc/profile_state.dart';
 import '../widgets/sleep_cycle_bottom_sheet.dart';
 import '../widgets/smooth_chart_widget.dart';
 
@@ -29,6 +31,12 @@ class _HomePageState extends State<HomePage>
       vsync: this,
       duration: const Duration(seconds: 10),
     )..repeat();
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAuthenticated) {
+      context.read<ProfileBloc>().add(
+        ProfileLoadRequested(userId: authState.userId),
+      );
+    }
   }
 
   @override
@@ -45,7 +53,7 @@ class _HomePageState extends State<HomePage>
       extendBody: true,
       extendBodyBehindAppBar: true,
       backgroundColor: colors.surface,
-      appBar: _buildAppBar(context, colors),
+      appBar: const SharedAppBar(),
       body: SingleChildScrollView(
         padding: EdgeInsets.only(
           top: MediaQuery.of(context).padding.top + kToolbarHeight + 10,
@@ -90,69 +98,16 @@ class _HomePageState extends State<HomePage>
 
   // --- CÁC COMPONENT GIAO DIỆN ---
 
-  AppBar _buildAppBar(BuildContext context, ColorScheme colors) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
-    return AppBar(
-      backgroundColor: colors.surface.withOpacity(0.7),
-      elevation: 0,
-      scrolledUnderElevation: 0,
-
-      flexibleSpace: ClipRRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-          child: Container(color: Colors.transparent),
-        ),
-      ),
-      centerTitle: true,
-      title: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: colors.primaryContainer.withOpacity(0.4),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Icon(Icons.eco, size: 24, color: colors.onPrimaryContainer),
-      ),
-      leading: Padding(
-        padding: const EdgeInsets.only(left: 16.0),
-        child: GestureDetector(
-          onTap: () {
-            print("Nhấn vào Avatar để mở Settings");
-          },
-          child: CircleAvatar(
-            backgroundColor: colors.outlineVariant,
-            backgroundImage: const NetworkImage('https://i.pravatar.cc/100'),
-          ),
-        ),
-      ),
-      actions: [
-        Padding(
-          padding: const EdgeInsets.only(right: 12.0),
-          child: IconButton(
-            icon: Icon(
-              isDarkMode ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-              color: colors.onSurface,
-            ),
-            onPressed: () {
-              context.read<ThemeCubit>().toggleTheme();
-              print("Nhấn để đổi theme");
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildGreeting(ColorScheme colors) {
-    return BlocBuilder<AuthBloc, AuthState>(
+    // 💡 ĐỔI SANG LẮNG NGHE PROFILEBLOC
+    return BlocBuilder<ProfileBloc, ProfileState>(
       builder: (context, state) {
         String subtitleText = 'Đang tải thông tin...';
-        if (state is AuthAuthenticated) {
-          final shortId = state.userId.length > 8
-              ? '${state.userId.substring(0, 8)}...'
-              : state.userId;
-          subtitleText = 'User ID: $shortId';
+
+        if (state is ProfileLoaded) {
+          // Lấy displayName ra, nếu bị null (chưa có tên) thì gọi là "Người dùng"
+          final name = state.user.displayName ?? 'Người dùng';
+          subtitleText = name;
         }
 
         return Column(
@@ -169,7 +124,11 @@ class _HomePageState extends State<HomePage>
             const SizedBox(height: 6),
             Text(
               subtitleText,
-              style: TextStyle(fontSize: 15, color: colors.onSurfaceVariant),
+              style: TextStyle(
+                fontSize: 15,
+                color: colors.onSurfaceVariant,
+                fontWeight: FontWeight.w500, // Thêm độ đậm một chút cho tên
+              ),
             ),
           ],
         );
