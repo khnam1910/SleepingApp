@@ -3,6 +3,7 @@ class UserEntity {
   final String? email;
   final String? displayName;
   final String? avatarUrl;
+  final String? fcmToken; // Thêm token thông báo
   final int? birthYear;
   final String? gender;
   final double? weightKg;
@@ -13,6 +14,7 @@ class UserEntity {
     this.email,
     this.displayName,
     this.avatarUrl,
+    this.fcmToken,
     this.birthYear,
     this.gender,
     this.weightKg,

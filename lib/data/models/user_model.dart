@@ -6,6 +6,7 @@ class UserModel extends UserEntity {
     super.email,
     super.displayName,
     super.avatarUrl,
+    super.fcmToken,
     super.birthYear,
     super.gender,
     super.weightKg,
@@ -18,6 +19,7 @@ class UserModel extends UserEntity {
       email: json['email'] as String?,
       displayName: json['display_name'] as String?,
       avatarUrl: json['avatar_url'] as String?,
+      fcmToken: json['fcm_token'] as String?,
       birthYear: json['birth_year'] as int?,
       gender: json['gender'] as String?,
       weightKg: (json['weight_kg'] as num?)?.toDouble(),
@@ -28,8 +30,9 @@ class UserModel extends UserEntity {
   Map<String, dynamic> toJson() {
     return {
       'email': email,
-      'display_name': displayName,
-      'avatar_url': avatarUrl,
+      'display_name': displayName ?? '',
+      'avatar_url': avatarUrl ?? '',
+      'fcm_token': fcmToken ?? '',
       'birth_year': birthYear,
       'gender': gender,
       'weight_kg': weightKg,
