@@ -1,54 +1,65 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
+// 💡 IMPORT HELPER VÀO ĐÂY (Sửa lại đường dẫn nếu cần)
+import '../../../core/utils/sleep_time_helper.dart';
+import '../../../data/models/alarm_schedules_model.dart';
+import '../../../domain/entities/alarm_schedules_entity.dart';
+import '../bloc/alarms_bloc.dart';
+import '../bloc/alarms_event.dart';
+import '../bloc/alarms_state.dart';
 import '../widgets/sleep_schedule_tracker.dart';
 
 class SetAlarmPage extends StatefulWidget {
-  const SetAlarmPage({super.key});
+  final AlarmSchedule? existingAlarm;
 
+  const SetAlarmPage({super.key, this.existingAlarm});
   @override
   State<SetAlarmPage> createState() => _SetAlarmPageState();
 }
 
 class _SetAlarmPageState extends State<SetAlarmPage> {
-  TimeOfDay _bedTime = const TimeOfDay(hour: 23, minute: 0);
-  TimeOfDay _wakeTime = const TimeOfDay(hour: 6, minute: 30);
-
+  late TimeOfDay _bedTime;
+  late TimeOfDay _wakeTime;
+  late List<bool> _selectedDays;
   bool _isVibrationActive = true;
-  final List<bool> _selectedDays = [true, true, true, true, true, false, false];
   final List<String> _dayLabels = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
-
   bool _isDialDragging = false;
+  @override
+  void initState() {
+    super.initState();
+    if (widget.existingAlarm != null) {
+      // --- TRƯỜNG HỢP CHỈNH SỬA: Đổ dữ liệu cũ lên UI ---
+      final alarm = widget.existingAlarm!;
 
-  String formatTime(TimeOfDay time) {
-    final h = time.hour.toString().padLeft(2, '0');
-    final m = time.minute.toString().padLeft(2, '0');
-    return '$h:$m';
+      // Parse wakeUpTime từ string "HH:mm" sang TimeOfDay
+      final wakeParts = alarm.wakeUpTime.split(':');
+      _wakeTime = TimeOfDay(
+        hour: int.parse(wakeParts[0]),
+        minute: int.parse(wakeParts[1]),
+      );
+
+      // Parse bedTime từ string "HH:mm" sang TimeOfDay
+      final bedParts = alarm.bedTime.split(':');
+      _bedTime = TimeOfDay(
+        hour: int.parse(bedParts[0]),
+        minute: int.parse(bedParts[1]),
+      );
+
+      // Khôi phục các ngày lặp lại (alarm.repeatDays chứa [2,3,4,5,6] tương ứng T2-T6)
+      _selectedDays = List.generate(7, (index) {
+        int weekday = index + 2; // T2 bắt đầu từ 2
+        return alarm.repeatDays.contains(weekday);
+      });
+    } else {
+      // --- TRƯỜNG HỢP THÊM MỚI: Giá trị mặc định ---
+      _bedTime = const TimeOfDay(hour: 23, minute: 0);
+      _wakeTime = const TimeOfDay(hour: 6, minute: 30);
+      _selectedDays = [true, true, true, true, true, false, false];
+    }
   }
 
-  // Lấy tổng số phút ngủ
-  int get sleepMinutes {
-    int bedMins = _bedTime.hour * 60 + _bedTime.minute;
-    int wakeMins = _wakeTime.hour * 60 + _wakeTime.minute;
-    return (wakeMins - bedMins + 1440) % 1440;
-  }
-
-  // Định dạng thời gian ngủ (VD: 7h 30p)
-  String get sleepDuration {
-    int diff = sleepMinutes;
-    int h = diff ~/ 60;
-    int m = diff % 60;
-    return '${h}h ${m}p';
-  }
-
-  // Tính số chu kỳ ngủ (Mỗi chu kỳ = 90 phút)
-  String get sleepCycles {
-    double cycles = sleepMinutes / 90;
-    // Làm tròn 1 chữ số thập phân nếu bị lẻ, hoặc hiển thị số chẵn
-    String cycleText = cycles == cycles.truncateToDouble()
-        ? cycles.toInt().toString()
-        : cycles.toStringAsFixed(1);
-    return '$cycleText Chu kỳ';
-  }
+  // 💡 ĐÃ XÓA 4 HÀM: formatTime, sleepMinutes, sleepDuration, sleepCycles ở đây
 
   // Widget hỗ trợ vẽ ô Thời gian (Đi ngủ / Thức dậy)
   Widget _buildTimePanel(
@@ -81,7 +92,8 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
         ),
         const SizedBox(height: 8),
         Text(
-          formatTime(time),
+          // 💡 SỬ DỤNG HELPER
+          SleepTimeHelper.formatTime(time),
           style: TextStyle(
             fontSize: 26,
             fontWeight: FontWeight.bold,
@@ -132,7 +144,7 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                   padding: const EdgeInsets.only(top: 32, bottom: 24),
                   decoration: BoxDecoration(
                     color: colors.surfaceContainerHighest.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(36), // Bo góc tròn trịa
+                    borderRadius: BorderRadius.circular(36),
                     border: Border.all(
                       color: Colors.white.withOpacity(0.1),
                       width: 1.5,
@@ -140,11 +152,10 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                   ),
                   child: Column(
                     children: [
-                      // --- VÒNG XOAY ĐỒNG HỒ (TÍCH HỢP CHỮ Ở GIỮA TÂM) ---
+                      // --- VÒNG XOAY ĐỒNG HỒ ---
                       Stack(
                         alignment: Alignment.center,
                         children: [
-                          // Widget vòng xoay
                           SleepScheduleTracker(
                             bedTime: _bedTime,
                             wakeTime: _wakeTime,
@@ -176,7 +187,11 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                sleepDuration,
+                                // 💡 SỬ DỤNG HELPER TÍNH THỜI LƯỢNG
+                                SleepTimeHelper.getSleepDuration(
+                                  _bedTime,
+                                  _wakeTime,
+                                ),
                                 style: TextStyle(
                                   fontSize: 36,
                                   fontWeight: FontWeight.w800,
@@ -197,7 +212,11 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
-                                  sleepCycles,
+                                  // 💡 SỬ DỤNG HELPER TÍNH CHU KỲ
+                                  SleepTimeHelper.getSleepCycles(
+                                    _bedTime,
+                                    _wakeTime,
+                                  ),
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
@@ -211,7 +230,7 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                       ),
                       const SizedBox(height: 32),
 
-                      // --- BẢNG ĐIỀU KHIỂN THỜI GIAN BÊN DƯỚI ---
+                      // --- BẢNG ĐIỀU KHIỂN THỜI GIAN ---
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 32),
                         child: Row(
@@ -225,14 +244,11 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                                 colors,
                               ),
                             ),
-
-                            // Vạch ngăn cách mỏng manh, tinh tế
                             Container(
                               width: 1,
                               height: 40,
                               color: colors.outlineVariant.withOpacity(0.4),
                             ),
-
                             Expanded(
                               child: _buildTimePanel(
                                 'Thức dậy',
@@ -317,12 +333,10 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                           );
                         }),
                       ),
-
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 20),
                         child: Divider(height: 1, thickness: 1),
                       ),
-
                       InkWell(
                         onTap: () {},
                         child: Row(
@@ -366,12 +380,10 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                           ],
                         ),
                       ),
-
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 20),
                         child: Divider(height: 1, thickness: 1),
                       ),
-
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -404,7 +416,6 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 120),
               ],
             ),
@@ -433,24 +444,76 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                   ],
                 ),
               ),
-              child: SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: () {
+              child: BlocListener<AlarmBloc, AlarmState>(
+                listener: (context, state) {
+                  if (state is AlarmSaveSuccess) {
+                    // 1. 💡 BẮN EVENT TẢI LẠI DANH SÁCH NGAY LẬP TỨC
+                    context.read<AlarmBloc>().add(LoadAlarmsRequested());
+
+                    // 2. Thông báo và quay về trang trước
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Đã lưu lịch trình ngủ!')),
+                    );
                     Navigator.pop(context);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: colors.primary,
-                    foregroundColor: colors.onPrimary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
+                  } else if (state is AlarmSaveFailure) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Lỗi: ${state.error}')),
+                    );
+                  }
+                },
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      List<int> repeatDays = [];
+                      for (int i = 0; i < _selectedDays.length; i++) {
+                        if (_selectedDays[i]) repeatDays.add(i + 2);
+                      }
+
+                      final alarmModel = AlarmScheduleModel(
+                        // Nếu có existingAlarm thì giữ nguyên ID cũ, ngược lại tạo ID mới khi thêm mới
+                        id:
+                            widget.existingAlarm?.id ??
+                            DateTime.now().millisecondsSinceEpoch.toString(),
+                        userId: widget.existingAlarm?.userId ?? '',
+                        wakeUpTime: SleepTimeHelper.formatTime(_wakeTime),
+                        bedTime: SleepTimeHelper.formatTime(_bedTime),
+                        repeatDays: repeatDays,
+                        isSmartWake: widget.existingAlarm?.isSmartWake ?? false,
+                        smartWakeWindow:
+                            widget.existingAlarm?.smartWakeWindow ?? 30,
+                        isEnabled: widget.existingAlarm?.isEnabled ?? true,
+                      );
+
+                      context.read<AlarmBloc>().add(
+                        SaveAlarmRequested(alarmModel),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: colors.primary,
+                      foregroundColor: colors.onPrimary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      elevation: 0,
                     ),
-                    elevation: 0,
-                  ),
-                  child: const Text(
-                    'Lưu báo thức',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    child: BlocBuilder<AlarmBloc, AlarmState>(
+                      builder: (context, state) {
+                        if (state is AlarmSaving) {
+                          return CircularProgressIndicator(
+                            color: colors.onPrimary,
+                          );
+                        }
+                        return const Text(
+                          'Lưu báo thức',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),
@@ -461,7 +524,3 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
     );
   }
 }
-
-// =========================================================================
-// WIDGET VÒNG XOAY CHU KỲ NGỦ (SLEEP TRACKER DIAL)
-// =========================================================================

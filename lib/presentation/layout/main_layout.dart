@@ -3,7 +3,9 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../data/repositories/alarms_repository.dart';
 import '../alarms/bloc/alarms_bloc.dart';
+import '../alarms/bloc/alarms_event.dart';
 import '../alarms/pages/alarms_page.dart';
 import '../home/pages/home_page.dart';
 
@@ -21,7 +23,8 @@ class _MainLayoutState extends State<MainLayout> {
   final List<Widget> _pages = [
     const HomePage(),
     BlocProvider(
-      create: (context) => AlarmsBloc(),
+      create: (context) =>
+          AlarmBloc(repository: AlarmRepository())..add(LoadAlarmsRequested()),
       child: const AlarmsPage(),
     ),
     const Center(

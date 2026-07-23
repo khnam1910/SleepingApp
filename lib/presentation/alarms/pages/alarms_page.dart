@@ -2,12 +2,16 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:sleeping_app_flutter/presentation/alarms/bloc/alarms_bloc.dart';
+// 💡 Cập nhật lại đường dẫn import cho đúng với tên file mới của bạn
+
 import 'package:sleeping_app_flutter/presentation/alarms/pages/set_alarm_page.dart';
 import 'package:sleeping_app_flutter/presentation/home/widgets/shared_app_bar.dart';
 
 import '../../global_widgets/shared_sleep_widgets.dart';
+import '../bloc/alarms_bloc.dart';
+import '../bloc/alarms_event.dart';
 import '../bloc/alarms_state.dart';
+import '../extensions/alarm_schedule_ui_extension.dart';
 import '../widgets/samsung_time_picker.dart';
 
 class AlarmsPage extends StatefulWidget {
@@ -20,6 +24,7 @@ class AlarmsPage extends StatefulWidget {
 class _AlarmsPageState extends State<AlarmsPage> {
   int _selectedToggleIndex = 0;
   TimeOfDay _targetTime = const TimeOfDay(hour: 7, minute: 0);
+
   Future<void> _selectTime(BuildContext context) async {
     final colors = Theme.of(context).colorScheme;
 
@@ -39,9 +44,12 @@ class _AlarmsPageState extends State<AlarmsPage> {
         _targetTime = picked;
       });
       if (mounted) {
-        context.read<AlarmsBloc>().calculateCycles(
-          picked,
-          _selectedToggleIndex,
+        // 💡 ĐÃ SỬA: Bắn Event thay vì gọi hàm trực tiếp
+        context.read<AlarmBloc>().add(
+          CalculateCyclesRequested(
+            time: picked,
+            toggleIndex: _selectedToggleIndex,
+          ),
         );
       }
     }
@@ -228,34 +236,78 @@ class _AlarmsPageState extends State<AlarmsPage> {
               physics: const NeverScrollableScrollPhysics(),
               padding: EdgeInsets.zero,
               children: [
-                SavedAlarmCard(
-                  title: 'Ngày thường',
-                  wakeTime: '06:30',
-                  bedTime: '23:00',
-                  duration: '7h 30p',
-                  days: 'T2 - T6',
-                  isActive: true,
-                  onToggle: (val) {},
-                  colors: colors,
-                ),
-                SavedAlarmCard(
-                  title: 'Cuối tuần',
-                  wakeTime: '08:00',
-                  bedTime: '00:30',
-                  duration: '7h 30p',
-                  days: 'T7 - CN',
-                  isActive: false,
-                  onToggle: (val) {},
-                  colors: colors,
-                ),
+                // SavedAlarmCard(
+                //   title: 'Ngày thường',
+                //   wakeTime: '06:30',
+                //   bedTime: '23:00',
+                //   duration: '7h 30p',
+                //   days: 'T2 - T6',
+                //   isActive: true,
+                //   onToggle: (val) {},
+                //   colors: colors,
+                // ),
+                // SavedAlarmCard(
+                //   title: 'Cuối tuần',
+                //   wakeTime: '08:00',
+                //   bedTime: '00:30',
+                //   duration: '7h 30p',
+                //   days: 'T7 - CN',
+                //   isActive: false,
+                //   onToggle: (val) {},
+                //   colors: colors,
+                // ),
+                // --- DANH SÁCH BÁO THỨC ---
+                BlocBuilder<AlarmBloc, AlarmState>(
+                  builder: (context, state) {
+                    // Nếu có danh sách báo thức được load thành công
+                    if (state is AlarmsLoaded) {
+                      final alarms = state.alarms;
 
+                      if (alarms.isEmpty) {
+                        return const Center(
+                          child: Text("Chưa có lịch trình nào"),
+                        );
+                      }
+
+                      return ListView(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        padding: EdgeInsets.zero,
+                        children: alarms.map((alarm) {
+                          return SavedAlarmCard(
+                            title: 'Lịch trình',
+                            wakeTime: alarm.wakeUpTime,
+                            bedTime: alarm.bedTime,
+                            duration: '7h 30p',
+                            days: alarm
+                                .repeatDaysText, // 👈 Đã nhận diện được extension nhờ import ở Bước 1
+                            isActive: alarm.isEnabled,
+                            onToggle: (val) {
+                              // Bắn event đổi trạng thái nếu muốn
+                            },
+                            colors: colors,
+                          );
+                        }).toList(),
+                      );
+                    }
+
+                    // Trạng thái mặc định khi đang tải hoặc khởi tạo
+                    return const SizedBox.shrink();
+                  },
+                ),
                 // NÚT THÊM MỚI (Dạng thanh ngang siêu gọn)
                 GestureDetector(
                   onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const SetAlarmPage(),
+                        builder: (context) => BlocProvider.value(
+                          value: context
+                              .read<
+                                AlarmBloc
+                              >(), // Lấy Bloc hiện tại của AlarmsPage truyền sang
+                          child: const SetAlarmPage(),
+                        ),
                       ),
                     );
                   },
@@ -303,12 +355,15 @@ class _AlarmsPageState extends State<AlarmsPage> {
               selectedIndex: _selectedToggleIndex,
               onChanged: (index) {
                 setState(() => _selectedToggleIndex = index);
-                // Nếu đã có kết quả tính toán trước đó, thì khi chuyển Tab sẽ tính lại luôn
-                final state = context.read<AlarmsBloc>().state;
-                if (state is AlarmsCalculated) {
-                  context.read<AlarmsBloc>().calculateCycles(
-                    state.targetTime,
-                    index,
+
+                // 💡 ĐÃ SỬA: Cập nhật gọi State và Event đúng chuẩn
+                final state = context.read<AlarmBloc>().state;
+                if (state is AlarmCalculated) {
+                  context.read<AlarmBloc>().add(
+                    CalculateCyclesRequested(
+                      time: state.targetTime,
+                      toggleIndex: index,
+                    ),
                   );
                 }
               },
@@ -316,13 +371,14 @@ class _AlarmsPageState extends State<AlarmsPage> {
             ),
             const SizedBox(height: 16),
 
-            // ✅ DÁN ĐOẠN BLOC BUILDER NÀY VÀO
-            BlocBuilder<AlarmsBloc, AlarmsState>(
+            // 💡 ĐÃ SỬA: Lắng nghe đúng AlarmBloc và AlarmState
+            BlocBuilder<AlarmBloc, AlarmState>(
               builder: (context, state) {
                 bool hasCalculated = false;
-                List<dynamic> cycles = [];
+                List<SleepCycleModel> cycles = [];
 
-                if (state is AlarmsCalculated) {
+                // 💡 ĐÃ SỬA: Ép kiểu đúng trạng thái AlarmCalculated
+                if (state is AlarmCalculated) {
                   hasCalculated = true;
                   cycles = state.cycles;
                 }
@@ -468,6 +524,7 @@ class _AlarmsPageState extends State<AlarmsPage> {
                             print(
                               "Sẽ lưu mốc giờ: ${_formatTime(_targetTime)}",
                             );
+                            // (Phần gọi Event lưu báo thức sẽ được thêm vào đây sau)
                           },
                           icon: const Icon(
                             Icons.check_circle_outline,

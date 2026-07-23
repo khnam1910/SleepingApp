@@ -1,21 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-// Nhớ import file state vừa tạo ở trên vào
+import '../../../data/repositories/alarms_repository.dart';
+import 'alarms_event.dart';
 import 'alarms_state.dart';
 
-class AlarmsBloc extends Cubit<AlarmsState> {
-  AlarmsBloc() : super(AlarmsInitial());
+// Liên kết 2 file Event và State vào chung Bloc
 
-  void calculateCycles(TimeOfDay time, int toggleIndex) {
+class AlarmBloc extends Bloc<AlarmEvent, AlarmState> {
+  final AlarmRepository _repository;
+
+  AlarmBloc({required AlarmRepository repository})
+    : _repository = repository,
+      super(AlarmInitial()) {
+    // Đăng ký các sự kiện
+    on<CalculateCyclesRequested>(_onCalculateCyclesRequested);
+    on<SaveAlarmRequested>(_onSaveAlarmRequested);
+    on<LoadAlarmsRequested>(_onLoadAlarmsRequested);
+    on<ToggleAlarmRequested>(_onToggleAlarmRequested);
+  }
+
+  // 1. LOGIC TÍNH TOÁN CHU KỲ
+  void _onCalculateCyclesRequested(
+    CalculateCyclesRequested event,
+    Emitter<AlarmState> emit,
+  ) {
     List<SleepCycleModel> results = [];
-    final int baseMinutes = time.hour * 60 + time.minute;
+    final int baseMinutes = event.time.hour * 60 + event.time.minute;
 
     for (int i = 6; i >= 3; i--) {
       int totalSleepMinutes = i * 90;
       int targetMinutes;
 
-      if (toggleIndex == 0) {
+      if (event.toggleIndex == 0) {
         // Option 0: "Tôi muốn THỨC DẬY lúc..." -> Tính giờ ĐI NGỦ
         targetMinutes = baseMinutes - totalSleepMinutes - 15;
       } else {
@@ -48,7 +65,41 @@ class AlarmsBloc extends Cubit<AlarmsState> {
       );
     }
 
-    // Sau khi tính xong, phát ra trạng thái AlarmsCalculated
-    emit(AlarmsCalculated(results, time, toggleIndex));
+    emit(AlarmCalculated(results, event.time, event.toggleIndex));
+  }
+
+  // 2. LOGIC LƯU VÀ HẸN GIỜ CHUÔNG
+  Future<void> _onSaveAlarmRequested(
+    SaveAlarmRequested event,
+    Emitter<AlarmState> emit,
+  ) async {
+    emit(AlarmSaving());
+    try {
+      await _repository.saveAndSetAlarm(event.alarmModel);
+      emit(AlarmSaveSuccess());
+    } catch (e) {
+      emit(AlarmSaveFailure(e.toString()));
+    }
+  }
+
+  Future<void> _onLoadAlarmsRequested(
+    LoadAlarmsRequested event,
+    Emitter<AlarmState> emit,
+  ) async {
+    emit(AlarmsLoading());
+    try {
+      final alarms = await _repository.getAlarms();
+      emit(AlarmsLoaded(alarms));
+    } catch (e) {
+      emit(AlarmSaveFailure(e.toString()));
+    }
+  }
+
+  // 💡 BỔ SUNG: 4. LOGIC BẬT/TẮT BÁO THỨC TRÊN UI
+  Future<void> _onToggleAlarmRequested(
+    ToggleAlarmRequested event,
+    Emitter<AlarmState> emit,
+  ) async {
+    // Xử lý cập nhật trạng thái bật/tắt và gọi lại repository nếu cần
   }
 }
