@@ -1,6 +1,8 @@
+// --- MODEL DỮ LIỆU TẠM THỜI (UI STATE MODEL) ---
 import 'package:flutter/material.dart';
 
-// --- MODEL DỮ LIỆU TẠM THỜI (UI STATE MODEL) ---
+import '../../../data/models/alarm_schedules_model.dart';
+
 class SleepCycleModel {
   final TimeOfDay time;
   final int cycles;
@@ -18,16 +20,35 @@ class SleepCycleModel {
 }
 
 // --- ĐỊNH NGHĨA CÁC TRẠNG THÁI ---
-abstract class AlarmsState {}
+abstract class AlarmState {}
 
-// Trạng thái 1: Ban đầu, chưa làm gì cả (Ẩn danh sách)
-class AlarmsInitial extends AlarmsState {}
+class AlarmInitial extends AlarmState {}
 
-// Trạng thái 2: Đã tính toán xong (Hiển thị danh sách kết quả)
-class AlarmsCalculated extends AlarmsState {
+// Các trạng thái của việc TÍNH TOÁN
+class AlarmCalculated extends AlarmState {
   final List<SleepCycleModel> cycles;
   final TimeOfDay targetTime;
   final int toggleIndex;
 
-  AlarmsCalculated(this.cycles, this.targetTime, this.toggleIndex);
+  AlarmCalculated(this.cycles, this.targetTime, this.toggleIndex);
+}
+
+// Các trạng thái của việc LƯU BÁO THỨC
+class AlarmSaving extends AlarmState {}
+
+class AlarmSaveSuccess extends AlarmState {}
+
+class AlarmSaveFailure extends AlarmState {
+  final String error;
+
+  AlarmSaveFailure(this.error);
+}
+
+class AlarmsLoading extends AlarmState {}
+
+// 💡 BỔ SUNG: Trạng thái mang theo danh sách báo thức đã tải thành công
+class AlarmsLoaded extends AlarmState {
+  final List<AlarmScheduleModel> alarms;
+
+  AlarmsLoaded(this.alarms);
 }
