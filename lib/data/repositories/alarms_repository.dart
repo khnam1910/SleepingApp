@@ -1,34 +1,47 @@
 import 'package:alarm/alarm.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // 💡 IMPORT THÊM
+import 'package:firebase_auth/firebase_auth.dart';
 
+import '../../domain/entities/alarm_schedules_entity.dart';
+import '../../domain/repositories/alarm_repository.dart';
 import '../models/alarm_schedules_model.dart';
 
-class AlarmRepository {
+class AlarmRepository implements IAlarmRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance; // 💡 THÊM BIẾN NÀY
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  Future<void> saveAndSetAlarm(AlarmScheduleModel alarmSchedule) async {
+  @override
+  Future<void> saveAndSetAlarm(AlarmSchedule alarmSchedule) async {
     try {
-      // 1. LẤY USER ID TỪ HỆ THỐNG TRONG TẦNG DATA
       final userId = _auth.currentUser?.uid;
       if (userId == null || userId.isEmpty) {
         throw Exception('Vui lòng đăng nhập để lưu báo thức!');
       }
 
-      // 2. Gán userId chuẩn vào dữ liệu JSON trước khi đẩy lên Firebase
-      final Map<String, dynamic> alarmJson = alarmSchedule.toJson();
+      // Ép kiểu hoặc map sang Model để lấy toJson
+      late Map<String, dynamic> alarmJson;
+      if (alarmSchedule is AlarmScheduleModel) {
+        alarmJson = alarmSchedule.toJson();
+      } else {
+        alarmJson = {
+          'user_id': userId,
+          'wake_up_time': alarmSchedule.wakeUpTime,
+          'bed_time': alarmSchedule.bedTime,
+          'repeat_days': alarmSchedule.repeatDays,
+          'is_smart_wake': alarmSchedule.isSmartWake,
+          'smart_wake_window': alarmSchedule.smartWakeWindow,
+          'is_enabled': alarmSchedule.isEnabled,
+        };
+      }
       alarmJson['user_id'] = userId;
 
-      // 3. LƯU LÊN FIREBASE
       await _firestore
           .collection('users')
-          .doc(userId) // Dùng userId vừa lấy được
+          .doc(userId)
           .collection('alarms')
           .doc(alarmSchedule.id)
           .set(alarmJson);
 
-      // 4. CÀI ĐẶT CHUÔNG REO CỤC BỘ BẰNG PACKAGE ALARM
       if (alarmSchedule.isEnabled) {
         final timeParts = alarmSchedule.wakeUpTime.split(':');
         final targetHour = int.parse(timeParts[0]);
@@ -76,8 +89,8 @@ class AlarmRepository {
     }
   }
 
-  // Hàm tải danh sách báo thức của user hiện tại
-  Future<List<AlarmScheduleModel>> getAlarms() async {
+  @override
+  Future<List<AlarmSchedule>> getAlarms() async {
     try {
       final userId = _auth.currentUser?.uid;
       if (userId == null || userId.isEmpty) {
@@ -91,7 +104,9 @@ class AlarmRepository {
           .get();
 
       return snapshot.docs
-          .map((doc) => AlarmScheduleModel.fromJson(doc.data(), doc.id))
+          .map<AlarmSchedule>(
+            (doc) => AlarmScheduleModel.fromJson(doc.data(), doc.id),
+          )
           .toList();
     } catch (e) {
       throw Exception('Lỗi khi tải danh sách báo thức: $e');

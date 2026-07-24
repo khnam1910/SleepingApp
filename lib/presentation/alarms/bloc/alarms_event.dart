@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../data/models/alarm_schedules_model.dart';
+import '../../../domain/entities/alarm_schedules_entity.dart';
 
 abstract class AlarmEvent {}
 
@@ -14,7 +14,7 @@ class CalculateCyclesRequested extends AlarmEvent {
 
 // Sự kiện yêu cầu lưu báo thức lên Firebase & Máy
 class SaveAlarmRequested extends AlarmEvent {
-  final AlarmScheduleModel alarmModel;
+  final AlarmSchedule alarmModel;
 
   SaveAlarmRequested(this.alarmModel);
 }
@@ -23,8 +23,8 @@ class LoadAlarmsRequested extends AlarmEvent {}
 
 // 💡 BỔ SUNG: Sự kiện bật/tắt trạng thái báo thức
 class ToggleAlarmRequested extends AlarmEvent {
-  final String alarmId;
+  final AlarmSchedule alarm;
   final bool isEnabled;
 
-  ToggleAlarmRequested({required this.alarmId, required this.isEnabled});
+  ToggleAlarmRequested({required this.alarm, required this.isEnabled});
 }

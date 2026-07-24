@@ -12,6 +12,19 @@ import 'core/theme/theme_cubit.dart';
 import 'data/repositories/alarms_repository.dart';
 import 'data/repositories/auth_repository.dart';
 import 'data/repositories/users_repository.dart';
+import 'domain/repositories/alarm_repository.dart';
+import 'domain/repositories/auth_repository.dart';
+import 'domain/repositories/user_repository.dart';
+import 'domain/usecases/auth/get_auth_status_usecase.dart';
+import 'domain/usecases/auth/login_usecase.dart';
+import 'domain/usecases/auth/logout_usecase.dart';
+import 'domain/usecases/auth/reset_password_usecase.dart';
+import 'domain/usecases/auth/send_otp_usecase.dart';
+import 'domain/usecases/auth/signin_with_facebook_usecase.dart';
+import 'domain/usecases/auth/signin_with_google_usecase.dart';
+import 'domain/usecases/auth/signup_usecase.dart';
+import 'domain/usecases/auth/verify_otp_usecase.dart';
+import 'domain/usecases/user/get_user_profile_usecase.dart';
 import 'firebase_options.dart';
 import 'presentation/auth/bloc/auth_bloc.dart';
 
@@ -31,24 +44,41 @@ class SleepingApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiRepositoryProvider(
       providers: [
-        RepositoryProvider(create: (context) => AuthRepository()),
-        RepositoryProvider(create: (context) => UserRepository()),
-        RepositoryProvider(create: (context) => AlarmRepository()),
+        RepositoryProvider<IAuthRepository>(
+          create: (context) => AuthRepository(),
+        ),
+        RepositoryProvider<IUserRepository>(
+          create: (context) => UserRepository(),
+        ),
+        RepositoryProvider<IAlarmRepository>(
+          create: (context) => AlarmRepository(),
+        ),
       ],
       child: MultiBlocProvider(
         providers: [
           BlocProvider(
-            create: (context) =>
-                AuthBloc(
-                  authRepository: context.read<AuthRepository>(),
-                )..add(
-                  AuthCheckRequested(),
-                ), // Gọi sự kiện kiểm tra đăng nhập lúc app vừa mở
+            create: (context) {
+              final authRepo = context.read<IAuthRepository>();
+              return AuthBloc(
+                loginUseCase: LoginUseCase(authRepo),
+                signUpUseCase: SignUpUseCase(authRepo),
+                logoutUseCase: LogoutUseCase(authRepo),
+                googleSignInUseCase: SignInWithGoogleUseCase(authRepo),
+                facebookSignInUseCase: SignInWithFacebookUseCase(authRepo),
+                sendOtpUseCase: SendOtpUseCase(authRepo),
+                verifyOtpUseCase: VerifyOtpUseCase(authRepo),
+                resetPasswordUseCase: ResetPasswordUseCase(authRepo),
+                getAuthStatusUseCase: GetAuthStatusUseCase(authRepo),
+              )..add(AuthCheckRequested());
+            },
           ),
           BlocProvider(create: (context) => ThemeCubit()),
           BlocProvider(
-            create: (context) =>
-                ProfileBloc(userRepository: context.read<UserRepository>()),
+            create: (context) => ProfileBloc(
+              getUserProfileUseCase: GetUserProfileUseCase(
+                context.read<IUserRepository>(),
+              ),
+            ),
           ),
         ],
         child: BlocBuilder<ThemeCubit, ThemeMode>(
@@ -69,22 +99,14 @@ class SleepingApp extends StatelessWidget {
                 textTheme: AppTypography.darkTextTheme,
               ),
               themeMode: themeMode,
-
-              // ĐÃ SỬA LOGIC Ở ĐÂY
               home: BlocBuilder<AuthBloc, AuthState>(
                 builder: (context, state) {
-                  // 1. Nếu đã đăng nhập -> Vào app
                   if (state is AuthAuthenticated) {
                     return const MainLayout();
-                  }
-                  // 2. Nếu chưa đăng nhập hoặc đăng nhập lỗi -> Ra màn hình Login
-                  else if (state is AuthUnauthenticated ||
+                  } else if (state is AuthUnauthenticated ||
                       state is AuthFailure) {
-                    // TẠM THỜI ẨN LOGIN PAGE ĐỂ TEST XEM LỖI CÓ PHẢI DO LOGIN PAGE KHÔNG
                     return const LoginPage();
                   }
-
-                  // 3. Nếu đang Initial hoặc Loading -> BẮT BUỘC phải hiện vòng xoay
                   return const Scaffold(
                     body: Center(
                       child: CircularProgressIndicator(),

@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-// 💡 IMPORT HELPER VÀO ĐÂY (Sửa lại đường dẫn nếu cần)
-import '../../../core/utils/sleep_time_helper.dart';
 import '../../../data/models/alarm_schedules_model.dart';
 import '../../../domain/entities/alarm_schedules_entity.dart';
+import '../../../domain/utils/sleep_math_utils.dart';
 import '../bloc/alarms_bloc.dart';
 import '../bloc/alarms_event.dart';
 import '../bloc/alarms_state.dart';
+import '../extensions/duration_extension.dart';
+import '../extensions/time_of_day_extension.dart';
 import '../widgets/sleep_schedule_tracker.dart';
 
 class SetAlarmPage extends StatefulWidget {
@@ -29,39 +30,31 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
   void initState() {
     super.initState();
     if (widget.existingAlarm != null) {
-      // --- TRƯỜNG HỢP CHỈNH SỬA: Đổ dữ liệu cũ lên UI ---
       final alarm = widget.existingAlarm!;
 
-      // Parse wakeUpTime từ string "HH:mm" sang TimeOfDay
       final wakeParts = alarm.wakeUpTime.split(':');
       _wakeTime = TimeOfDay(
         hour: int.parse(wakeParts[0]),
         minute: int.parse(wakeParts[1]),
       );
 
-      // Parse bedTime từ string "HH:mm" sang TimeOfDay
       final bedParts = alarm.bedTime.split(':');
       _bedTime = TimeOfDay(
         hour: int.parse(bedParts[0]),
         minute: int.parse(bedParts[1]),
       );
 
-      // Khôi phục các ngày lặp lại (alarm.repeatDays chứa [2,3,4,5,6] tương ứng T2-T6)
       _selectedDays = List.generate(7, (index) {
-        int weekday = index + 2; // T2 bắt đầu từ 2
+        int weekday = index + 2;
         return alarm.repeatDays.contains(weekday);
       });
     } else {
-      // --- TRƯỜNG HỢP THÊM MỚI: Giá trị mặc định ---
       _bedTime = const TimeOfDay(hour: 23, minute: 0);
       _wakeTime = const TimeOfDay(hour: 6, minute: 30);
       _selectedDays = [true, true, true, true, true, false, false];
     }
   }
 
-  // 💡 ĐÃ XÓA 4 HÀM: formatTime, sleepMinutes, sleepDuration, sleepCycles ở đây
-
-  // Widget hỗ trợ vẽ ô Thời gian (Đi ngủ / Thức dậy)
   Widget _buildTimePanel(
     String title,
     TimeOfDay time,
@@ -92,8 +85,7 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
         ),
         const SizedBox(height: 8),
         Text(
-          // 💡 SỬ DỤNG HELPER
-          SleepTimeHelper.formatTime(time),
+          time.formatHHmm(),
           style: TextStyle(
             fontSize: 26,
             fontWeight: FontWeight.bold,
@@ -108,6 +100,15 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+
+    // Tính toán thời gian ngủ và chu kỳ
+    final sleepMins = SleepMathUtils.getDifferenceMinutes(
+      _bedTime.hour,
+      _bedTime.minute,
+      _wakeTime.hour,
+      _wakeTime.minute,
+    );
+    final cycles = (sleepMins / 90).toStringAsFixed(1);
 
     return Scaffold(
       backgroundColor: colors.surface,
@@ -137,9 +138,6 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             child: Column(
               children: [
-                // ==========================================
-                // 1. TRUNG TÂM ĐIỀU KHIỂN (CONTROL CENTER CARD)
-                // ==========================================
                 Container(
                   padding: const EdgeInsets.only(top: 32, bottom: 24),
                   decoration: BoxDecoration(
@@ -152,7 +150,6 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                   ),
                   child: Column(
                     children: [
-                      // --- VÒNG XOAY ĐỒNG HỒ ---
                       Stack(
                         alignment: Alignment.center,
                         children: [
@@ -171,8 +168,6 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                             onDragEnd: () =>
                                 setState(() => _isDialDragging = false),
                           ),
-
-                          // Nội dung nằm ngay giữa tâm vòng tròn
                           Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -187,11 +182,7 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                // 💡 SỬ DỤNG HELPER TÍNH THỜI LƯỢNG
-                                SleepTimeHelper.getSleepDuration(
-                                  _bedTime,
-                                  _wakeTime,
-                                ),
+                                sleepMins.formatAsDuration(),
                                 style: TextStyle(
                                   fontSize: 36,
                                   fontWeight: FontWeight.w800,
@@ -212,11 +203,7 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
-                                  // 💡 SỬ DỤNG HELPER TÍNH CHU KỲ
-                                  SleepTimeHelper.getSleepCycles(
-                                    _bedTime,
-                                    _wakeTime,
-                                  ),
+                                  '$cycles Chu kỳ',
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
@@ -229,8 +216,6 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                         ],
                       ),
                       const SizedBox(height: 32),
-
-                      // --- BẢNG ĐIỀU KHIỂN THỜI GIAN ---
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 32),
                         child: Row(
@@ -265,10 +250,6 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                   ),
                 ),
                 const SizedBox(height: 32),
-
-                // ==========================================
-                // 2. THẺ CÀI ĐẶT
-                // ==========================================
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 20,
@@ -420,8 +401,6 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
               ],
             ),
           ),
-
-          // --- NÚT LƯU ---
           Positioned(
             bottom: 0,
             left: 0,
@@ -447,10 +426,7 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
               child: BlocListener<AlarmBloc, AlarmState>(
                 listener: (context, state) {
                   if (state is AlarmSaveSuccess) {
-                    // 1. 💡 BẮN EVENT TẢI LẠI DANH SÁCH NGAY LẬP TỨC
                     context.read<AlarmBloc>().add(LoadAlarmsRequested());
-
-                    // 2. Thông báo và quay về trang trước
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Đã lưu lịch trình ngủ!')),
                     );
@@ -472,13 +448,12 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                       }
 
                       final alarmModel = AlarmScheduleModel(
-                        // Nếu có existingAlarm thì giữ nguyên ID cũ, ngược lại tạo ID mới khi thêm mới
                         id:
                             widget.existingAlarm?.id ??
                             DateTime.now().millisecondsSinceEpoch.toString(),
                         userId: widget.existingAlarm?.userId ?? '',
-                        wakeUpTime: SleepTimeHelper.formatTime(_wakeTime),
-                        bedTime: SleepTimeHelper.formatTime(_bedTime),
+                        wakeUpTime: _wakeTime.formatHHmm(),
+                        bedTime: _bedTime.formatHHmm(),
                         repeatDays: repeatDays,
                         isSmartWake: widget.existingAlarm?.isSmartWake ?? false,
                         smartWakeWindow:

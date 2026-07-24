@@ -58,3 +58,11 @@ class AuthVerifyOtpRequested extends AuthEvent {
 }
 
 class AuthFacebookSignInRequested extends AuthEvent {}
+
+class AuthStateChanged extends AuthEvent {
+  final String? userId;
+  const AuthStateChanged(this.userId);
+
+  @override
+  List<Object?> get props => [userId];
+}
