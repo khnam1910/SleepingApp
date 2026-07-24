@@ -2,17 +2,18 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-// 💡 Cập nhật lại đường dẫn import cho đúng với tên file mới của bạn
 
-import 'package:sleeping_app_flutter/presentation/alarms/pages/set_alarm_page.dart';
-import 'package:sleeping_app_flutter/presentation/home/widgets/shared_app_bar.dart';
-
+import '../../../domain/entities/sleep_cycle.dart';
 import '../../global_widgets/shared_sleep_widgets.dart';
+import '../../home/widgets/shared_app_bar.dart';
 import '../bloc/alarms_bloc.dart';
 import '../bloc/alarms_event.dart';
 import '../bloc/alarms_state.dart';
 import '../extensions/alarm_schedule_ui_extension.dart';
+import '../extensions/sleep_cycle_ui_extension.dart';
+import '../extensions/time_of_day_extension.dart';
 import '../widgets/samsung_time_picker.dart';
+import 'set_alarm_page.dart';
 
 class AlarmsPage extends StatefulWidget {
   const AlarmsPage({super.key});
@@ -28,7 +29,6 @@ class _AlarmsPageState extends State<AlarmsPage> {
   Future<void> _selectTime(BuildContext context) async {
     final colors = Theme.of(context).colorScheme;
 
-    // Hiển thị Dialog tự thiết kế thay vì thư viện mặc định
     final TimeOfDay? picked = await showDialog<TimeOfDay>(
       context: context,
       builder: (BuildContext context) {
@@ -44,7 +44,6 @@ class _AlarmsPageState extends State<AlarmsPage> {
         _targetTime = picked;
       });
       if (mounted) {
-        // 💡 ĐÃ SỬA: Bắn Event thay vì gọi hàm trực tiếp
         context.read<AlarmBloc>().add(
           CalculateCyclesRequested(
             time: picked,
@@ -55,36 +54,24 @@ class _AlarmsPageState extends State<AlarmsPage> {
     }
   }
 
-  String _formatTime(TimeOfDay time) {
-    final h = time.hour.toString().padLeft(2, '0');
-    final m = time.minute.toString().padLeft(2, '0');
-    return '$h:$m';
-  }
-
   void _show90MinRuleDialog(BuildContext context, ColorScheme colors) {
-    // showDialog giúp hộp thoại nổi ở chính giữa màn hình
     showDialog(
       context: context,
-      barrierColor: colors.scrim.withOpacity(0.4), // Màu nền đen mờ nhẹ
+      barrierColor: colors.scrim.withOpacity(0.4),
       builder: (context) {
-        // BackdropFilter là "phép thuật" tạo ra hiệu ứng kính mờ (blur)
         return BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0),
           child: Dialog(
             backgroundColor: colors.surface,
             elevation: 0,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(
-                28,
-              ), // Bo góc tròn trịa cực kỳ hiện đại
+              borderRadius: BorderRadius.circular(28),
             ),
             child: Padding(
               padding: const EdgeInsets.all(24.0),
               child: Column(
-                mainAxisSize:
-                    MainAxisSize.min, // Tự động co giãn chiều cao theo nội dung
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Icon ở chính giữa trên cùng
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -98,8 +85,6 @@ class _AlarmsPageState extends State<AlarmsPage> {
                     ),
                   ),
                   const SizedBox(height: 20),
-
-                  // Tiêu đề
                   Text(
                     'Quy tắc 90 Phút',
                     style: TextStyle(
@@ -110,8 +95,6 @@ class _AlarmsPageState extends State<AlarmsPage> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 12),
-
-                  // Nội dung chữ
                   Text(
                     'Cơ thể người ngủ theo các chu kỳ dài khoảng 90 phút. Việc thức giấc giữa chừng thường khiến bạn lờ đờ, trong khi thức dậy vào cuối chu kỳ sẽ giúp cơ thể tỉnh táo và sảng khoái.',
                     style: TextStyle(
@@ -122,8 +105,6 @@ class _AlarmsPageState extends State<AlarmsPage> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 20),
-
-                  // Điểm nhấn (Viên thuốc)
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
@@ -156,8 +137,6 @@ class _AlarmsPageState extends State<AlarmsPage> {
                     ),
                   ),
                   const SizedBox(height: 24),
-
-                  // Nút bấm đóng
                   SizedBox(
                     width: double.infinity,
                     height: 52,
@@ -197,7 +176,7 @@ class _AlarmsPageState extends State<AlarmsPage> {
       extendBody: true,
       extendBodyBehindAppBar: true,
       backgroundColor: colors.surface,
-      appBar: SharedAppBar(),
+      appBar: const SharedAppBar(),
       body: SingleChildScrollView(
         padding: EdgeInsets.only(
           top: MediaQuery.of(context).padding.top + kToolbarHeight + 10,
@@ -229,37 +208,13 @@ class _AlarmsPageState extends State<AlarmsPage> {
               ],
             ),
             const SizedBox(height: 16),
-
-            // --- DANH SÁCH BÁO THỨC (CUỘN DỌC TỐI GIẢN) ---
             ListView(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               padding: EdgeInsets.zero,
               children: [
-                // SavedAlarmCard(
-                //   title: 'Ngày thường',
-                //   wakeTime: '06:30',
-                //   bedTime: '23:00',
-                //   duration: '7h 30p',
-                //   days: 'T2 - T6',
-                //   isActive: true,
-                //   onToggle: (val) {},
-                //   colors: colors,
-                // ),
-                // SavedAlarmCard(
-                //   title: 'Cuối tuần',
-                //   wakeTime: '08:00',
-                //   bedTime: '00:30',
-                //   duration: '7h 30p',
-                //   days: 'T7 - CN',
-                //   isActive: false,
-                //   onToggle: (val) {},
-                //   colors: colors,
-                // ),
-                // --- DANH SÁCH BÁO THỨC ---
                 BlocBuilder<AlarmBloc, AlarmState>(
                   builder: (context, state) {
-                    // Nếu có danh sách báo thức được load thành công
                     if (state is AlarmsLoaded) {
                       final alarms = state.alarms;
 
@@ -278,34 +233,35 @@ class _AlarmsPageState extends State<AlarmsPage> {
                             title: 'Lịch trình',
                             wakeTime: alarm.wakeUpTime,
                             bedTime: alarm.bedTime,
-                            duration: '7h 30p',
-                            days: alarm
-                                .repeatDaysText, // 👈 Đã nhận diện được extension nhờ import ở Bước 1
+                            duration: alarm.sleepDurationText,
+                            days: alarm.repeatDaysText,
                             isActive: alarm.isEnabled,
                             onToggle: (val) {
-                              // Bắn event đổi trạng thái nếu muốn
+                              context.read<AlarmBloc>().add(
+                                ToggleAlarmRequested(
+                                  alarm: alarm,
+                                  isEnabled: val,
+                                ),
+                              );
                             },
                             colors: colors,
                           );
                         }).toList(),
                       );
                     }
-
-                    // Trạng thái mặc định khi đang tải hoặc khởi tạo
                     return const SizedBox.shrink();
                   },
                 ),
-                // NÚT THÊM MỚI (Dạng thanh ngang siêu gọn)
                 GestureDetector(
                   onTap: () {
+                    // Lấy bloc từ context hiện tại (trước khi push sang Route mới)
+                    final alarmBloc = context.read<AlarmBloc>();
+
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => BlocProvider.value(
-                          value: context
-                              .read<
-                                AlarmBloc
-                              >(), // Lấy Bloc hiện tại của AlarmsPage truyền sang
+                        builder: (_) => BlocProvider.value(
+                          value: alarmBloc,
                           child: const SetAlarmPage(),
                         ),
                       ),
@@ -346,17 +302,13 @@ class _AlarmsPageState extends State<AlarmsPage> {
                 ),
               ],
             ),
-
             const SizedBox(height: 32),
-
             CustomSegmentedToggle(
               leftText: 'Tôi muốn thức\ndậy lúc...',
               rightText: 'Tôi sẽ đi\nngủ lúc...',
               selectedIndex: _selectedToggleIndex,
               onChanged: (index) {
                 setState(() => _selectedToggleIndex = index);
-
-                // 💡 ĐÃ SỬA: Cập nhật gọi State và Event đúng chuẩn
                 final state = context.read<AlarmBloc>().state;
                 if (state is AlarmCalculated) {
                   context.read<AlarmBloc>().add(
@@ -370,14 +322,11 @@ class _AlarmsPageState extends State<AlarmsPage> {
               colors: colors,
             ),
             const SizedBox(height: 16),
-
-            // 💡 ĐÃ SỬA: Lắng nghe đúng AlarmBloc và AlarmState
             BlocBuilder<AlarmBloc, AlarmState>(
               builder: (context, state) {
                 bool hasCalculated = false;
-                List<SleepCycleModel> cycles = [];
+                List<SleepCycle> cycles = [];
 
-                // 💡 ĐÃ SỬA: Ép kiểu đúng trạng thái AlarmCalculated
                 if (state is AlarmCalculated) {
                   hasCalculated = true;
                   cycles = state.cycles;
@@ -390,7 +339,6 @@ class _AlarmsPageState extends State<AlarmsPage> {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // --- 1. NÚT CHỌN GIỜ LUÔN HIỆN ---
                     Material(
                       color: Colors.transparent,
                       child: InkWell(
@@ -418,7 +366,7 @@ class _AlarmsPageState extends State<AlarmsPage> {
                               const SizedBox(width: 16),
                               Expanded(
                                 child: Text(
-                                  _formatTime(_targetTime),
+                                  _targetTime.formatHHmm(),
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
@@ -437,8 +385,6 @@ class _AlarmsPageState extends State<AlarmsPage> {
                       ),
                     ),
                     const SizedBox(height: 32),
-
-                    // --- 2. CHỈ HIỆN DANH SÁCH & NÚT LƯU KHI ĐÃ CÓ KẾT QUẢ ---
                     if (hasCalculated) ...[
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
@@ -497,14 +443,12 @@ class _AlarmsPageState extends State<AlarmsPage> {
                         ],
                       ),
                       const SizedBox(height: 16),
-
-                      // In ra các thẻ chu kỳ
                       ...cycles.map((cycle) {
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 12.0),
                           child: SleepCycleCard(
                             timeLabel: cardTimeLabel,
-                            wakeTime: _formatTime(cycle.time),
+                            wakeTime: cycle.time.formatHHmm(),
                             duration: cycle.durationStr,
                             cycles: cycle.cycles,
                             batteryBars: cycle.batteryBars,
@@ -514,17 +458,14 @@ class _AlarmsPageState extends State<AlarmsPage> {
                         );
                       }),
                       const SizedBox(height: 32),
-
-                      // Nút Áp dụng
                       SizedBox(
                         width: double.infinity,
                         height: 56,
                         child: ElevatedButton.icon(
                           onPressed: () {
                             print(
-                              "Sẽ lưu mốc giờ: ${_formatTime(_targetTime)}",
+                              "Sẽ lưu mốc giờ: ${_targetTime.formatHHmm()}",
                             );
-                            // (Phần gọi Event lưu báo thức sẽ được thêm vào đây sau)
                           },
                           icon: const Icon(
                             Icons.check_circle_outline,
@@ -559,12 +500,11 @@ class _AlarmsPageState extends State<AlarmsPage> {
                           ),
                         ),
                       ),
-                    ], // Kết thúc vùng if
+                    ],
                   ],
                 );
               },
             ),
-
             const SizedBox(height: 120),
           ],
         ),

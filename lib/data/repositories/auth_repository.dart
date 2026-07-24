@@ -4,10 +4,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
-// Đừng quên import UserModel của bạn vào đây
+import '../../domain/entities/user_entity.dart';
+import '../../domain/repositories/auth_repository.dart';
 import '../models/user_model.dart';
 
-class AuthRepository {
+class AuthRepository implements IAuthRepository {
   final FirebaseAuth _firebaseAuth;
   final FirebaseFunctions _firebaseFunctions;
   final GoogleSignIn _googleSignIn;
@@ -26,7 +27,20 @@ class AuthRepository {
        _facebookAuth = facebookAuth ?? FacebookAuth.instance,
        _firestore = firestore ?? FirebaseFirestore.instance;
 
-  // 💡 ĐÃ THÊM: {String? customAvatar}
+  @override
+  Stream<UserEntity?> get onAuthStateChanged {
+    return _firebaseAuth.authStateChanges().map((user) {
+      if (user == null) return null;
+      return UserModel(
+        id: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        avatarUrl: user.photoURL,
+        targetSleepMinutes: 480,
+      );
+    });
+  }
+
   Future<void> _createUserDocumentIfNotExists(
     User user, {
     String? customAvatar,
@@ -38,7 +52,6 @@ class AuthRepository {
         id: user.uid,
         email: user.email,
         displayName: user.displayName,
-        // 💡 Ưu tiên dùng customAvatar, nếu không có mới dùng của Firebase mặc định
         avatarUrl: customAvatar ?? user.photoURL,
         targetSleepMinutes: 480,
       );
@@ -47,35 +60,31 @@ class AuthRepository {
       userData['created_at'] = FieldValue.serverTimestamp();
 
       await _firestore.collection('users').doc(user.uid).set(userData);
-    }
-    // (Tùy chọn) Cập nhật lại ảnh nếu user đã tồn tại nhưng có link ảnh thật mới
-    else if (customAvatar != null) {
+    } else if (customAvatar != null) {
       await _firestore.collection('users').doc(user.uid).update({
-        'avatar_url':
-            customAvatar, // Nhớ dùng đúng tên key trên Firebase của bạn
+        'avatar_url': customAvatar,
       });
     }
   }
 
-  // ==========================================
-  // CÁC HÀM XÁC THỰC
-  // ==========================================
-
-  Future<UserCredential?> signIn({
+  @override
+  Future<UserEntity?> signIn({
     required String email,
     required String password,
   }) async {
     try {
-      return await _firebaseAuth.signInWithEmailAndPassword(
+      final credential = await _firebaseAuth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
+      return _mapFirebaseUser(credential.user);
     } on FirebaseAuthException catch (e) {
       throw Exception(e.message);
     }
   }
 
-  Future<UserCredential?> signUp({
+  @override
+  Future<UserEntity?> signUp({
     required String email,
     required String password,
   }) async {
@@ -87,10 +96,9 @@ class AuthRepository {
       final user = userCredential.user;
 
       if (user != null) {
-        // 💡 SỬ DỤNG HÀM HELPER Ở ĐÂY
         await _createUserDocumentIfNotExists(user);
       }
-      return userCredential;
+      return _mapFirebaseUser(user);
     } on FirebaseAuthException catch (e) {
       throw Exception(e.message);
     } catch (e) {
@@ -98,7 +106,8 @@ class AuthRepository {
     }
   }
 
-  Future<UserCredential?> signInWithGoogle() async {
+  @override
+  Future<UserEntity?> signInWithGoogle() async {
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) return null;
@@ -116,11 +125,10 @@ class AuthRepository {
       final user = userCredential.user;
 
       if (user != null) {
-        // 💡 SỬ DỤNG HÀM HELPER Ở ĐÂY
         await _createUserDocumentIfNotExists(user);
       }
 
-      return userCredential;
+      return _mapFirebaseUser(user);
     } on FirebaseAuthException catch (e) {
       throw Exception(e.message);
     } catch (e) {
@@ -128,7 +136,8 @@ class AuthRepository {
     }
   }
 
-  Future<UserCredential?> signInWithFacebook() async {
+  @override
+  Future<UserEntity?> signInWithFacebook() async {
     try {
       final LoginResult result = await _facebookAuth.login();
       if (result.status != LoginStatus.success) return null;
@@ -144,25 +153,18 @@ class AuthRepository {
       final user = userCredential.user;
 
       if (user != null) {
-        // ========================================================
-        // 💡 BẮT ĐẦU SỬA Ở ĐÂY: Lấy link ảnh xịn từ Facebook Auth
-        // ========================================================
         String? realFbAvatar;
         try {
-          // Xin Facebook cục data (chứa avatar xịn đã kèm token giải mã)
           final userData = await _facebookAuth.getUserData();
-          // Trích xuất đường link
           realFbAvatar = userData['picture']['data']['url'];
         } catch (e) {
           print("Không thể lấy ảnh Facebook xịn: $e");
         }
 
-        // Truyền link ảnh xịn vào hàm lưu
         await _createUserDocumentIfNotExists(user, customAvatar: realFbAvatar);
-        // ========================================================
       }
 
-      return userCredential;
+      return _mapFirebaseUser(user);
     } on FirebaseAuthException catch (e) {
       throw Exception(e.message);
     } catch (e) {
@@ -170,6 +172,7 @@ class AuthRepository {
     }
   }
 
+  @override
   Future<void> sendOtp({required String email}) async {
     try {
       await _firebaseFunctions.httpsCallable('requestOtp').call({
@@ -182,6 +185,7 @@ class AuthRepository {
     }
   }
 
+  @override
   Future<void> verifyOtp({required String email, required String otp}) async {
     try {
       await _firebaseFunctions.httpsCallable('verifyOtp').call({
@@ -193,6 +197,7 @@ class AuthRepository {
     }
   }
 
+  @override
   Future<void> sendPasswordResetEmail({required String email}) async {
     try {
       await _firebaseAuth.sendPasswordResetEmail(email: email);
@@ -201,6 +206,7 @@ class AuthRepository {
     }
   }
 
+  @override
   Future<void> signOut() async {
     try {
       await _firebaseAuth.signOut();
@@ -220,5 +226,16 @@ class AuthRepository {
     } catch (e) {
       print("Lỗi đăng xuất Facebook: $e");
     }
+  }
+
+  UserEntity? _mapFirebaseUser(User? user) {
+    if (user == null) return null;
+    return UserModel(
+      id: user.uid,
+      email: user.email,
+      displayName: user.displayName,
+      avatarUrl: user.photoURL,
+      targetSleepMinutes: 480,
+    );
   }
 }

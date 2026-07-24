@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../../domain/entities/alarm_schedules_entity.dart';
 
+import '../../../domain/utils/sleep_math_utils.dart';
+import 'duration_extension.dart';
+
 extension AlarmScheduleUIX on AlarmSchedule {
-  // 1. Chuyển đổi danh sách ngày lặp thành text hiển thị trực quan (Ví dụ: "T2, T3, T4, T5, T6")
+  /// 1. Chuyển đổi danh sách ngày lặp thành text hiển thị trực quan
   String get repeatDaysText {
     if (repeatDays.isEmpty) return "Chỉ một lần";
     if (repeatDays.length == 7) return "Mỗi ngày";
@@ -31,9 +34,42 @@ extension AlarmScheduleUIX on AlarmSchedule {
     return isEnabled ? colors.primary : colors.outline;
   }
 
-  // 3. Mô tả ngắn gọn tính năng thông minh để hiện badge trên UI
+  /// 3. Mô tả ngắn gọn tính năng thông minh để hiện badge trên UI
   String get smartWakeBadgeText {
     if (!isSmartWake) return "Báo thức chuẩn";
     return "Smart Wake ($smartWakeWindow phút)";
+  }
+
+  /// 4. Tự động tính toán thời lượng ngủ
+  String get sleepDurationText {
+    final wakeParts = wakeUpTime.split(':');
+    final bedParts = bedTime.split(':');
+
+    final minutes = SleepMathUtils.getDifferenceMinutes(
+      int.parse(bedParts[0]),
+      int.parse(bedParts[1]),
+      int.parse(wakeParts[0]),
+      int.parse(wakeParts[1]),
+    );
+
+    return minutes.formatAsDuration();
+  }
+
+  /// 5. Tính toán số chu kỳ giấc ngủ
+  String get sleepCyclesText {
+    final wakeParts = wakeUpTime.split(':');
+    final bedParts = bedTime.split(':');
+
+    final minutes = SleepMathUtils.getDifferenceMinutes(
+      int.parse(bedParts[0]),
+      int.parse(bedParts[1]),
+      int.parse(wakeParts[0]),
+      int.parse(wakeParts[1]),
+    );
+
+    double cycles = minutes / 90;
+    return cycles == cycles.truncateToDouble()
+        ? cycles.toInt().toString()
+        : cycles.toStringAsFixed(1);
   }
 }

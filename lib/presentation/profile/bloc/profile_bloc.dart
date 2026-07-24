@@ -2,13 +2,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sleeping_app_flutter/presentation/profile/bloc/profile_event.dart';
 import 'package:sleeping_app_flutter/presentation/profile/bloc/profile_state.dart';
 
-import '../../../data/repositories/users_repository.dart';
+import '../../../domain/usecases/user/get_user_profile_usecase.dart';
 
 class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
-  final UserRepository _userRepository;
+  final GetUserProfileUseCase _getUserProfileUseCase;
 
-  ProfileBloc({required UserRepository userRepository})
-    : _userRepository = userRepository,
+  ProfileBloc({required GetUserProfileUseCase getUserProfileUseCase})
+    : _getUserProfileUseCase = getUserProfileUseCase,
       super(ProfileInitial()) {
     on<ProfileLoadRequested>(_onProfileLoadRequested);
   }
@@ -19,8 +19,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   ) async {
     emit(ProfileLoading());
     try {
-      // Gọi xuống UserRepository để lấy dữ liệu
-      final user = await _userRepository.getUser(event.userId);
+      final user = await _getUserProfileUseCase.execute(event.userId);
 
       if (user != null) {
         emit(ProfileLoaded(user: user));

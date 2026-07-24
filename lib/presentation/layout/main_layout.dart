@@ -3,7 +3,9 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../data/repositories/alarms_repository.dart';
+import '../../domain/repositories/alarm_repository.dart';
+import '../../domain/usecases/alarm/get_alarms_usecase.dart';
+import '../../domain/usecases/alarm/save_alarm_usecase.dart';
 import '../alarms/bloc/alarms_bloc.dart';
 import '../alarms/bloc/alarms_event.dart';
 import '../alarms/pages/alarms_page.dart';
@@ -19,39 +21,38 @@ class MainLayout extends StatefulWidget {
 class _MainLayoutState extends State<MainLayout> {
   int _selectedIndex = 0;
 
-  // Danh sách 4 màn hình chính của App
-  final List<Widget> _pages = [
-    const HomePage(),
-    BlocProvider(
-      create: (context) =>
-          AlarmBloc(repository: AlarmRepository())..add(LoadAlarmsRequested()),
-      child: const AlarmsPage(),
-    ),
-    const Center(
-      child: Text('Sounds Page (Coming Soon)'),
-    ), // Chỗ trống cho màn hình Sounds
-    const Center(
-      child: Text('Stats Page (Coming Soon)'),
-    ), // Chỗ trống cho màn hình Stats
-  ];
-
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
+    // Di chuyển _pages vào build để có thể truy cập context và inject UseCases
+    final List<Widget> pages = [
+      const HomePage(),
+      BlocProvider(
+        create: (context) {
+          final repo = context.read<IAlarmRepository>();
+          return AlarmBloc(
+            saveAlarmUseCase: SaveAlarmUseCase(repo),
+            getAlarmsUseCase: GetAlarmsUseCase(repo),
+          )..add(LoadAlarmsRequested());
+        },
+        child: const AlarmsPage(),
+      ),
+      const Center(child: Text('Sounds Page (Coming Soon)')),
+      const Center(child: Text('Stats Page (Coming Soon)')),
+    ];
+
     return Scaffold(
-      extendBody: true, // Ép body chìm xuống dưới thanh Navigation trong suốt
+      extendBody: true,
       backgroundColor: colors.surface,
-      // IndexedStack giúp giữ nguyên trạng thái (không load lại) khi chuyển qua lại giữa các tab
       body: IndexedStack(
         index: _selectedIndex,
-        children: _pages,
+        children: pages,
       ),
       bottomNavigationBar: _buildCustomBottomNav(colors),
     );
   }
 
-  // BÊ NGUYÊN HÀM VẼ BOTTOM NAV TỪ HOME_PAGE CŨ SANG ĐÂY
   Widget _buildCustomBottomNav(ColorScheme colors) {
     final List<Map<String, dynamic>> navItems = [
       {'icon': Icons.home_outlined, 'activeIcon': Icons.home, 'label': 'Home'},
@@ -111,7 +112,6 @@ class _MainLayoutState extends State<MainLayout> {
                     child: GestureDetector(
                       behavior: HitTestBehavior.opaque,
                       onTap: () {
-                        // CHỈ CẦN SET STATE Ở ĐÂY LÀ CHUYỂN TAB CỰC MƯỢT
                         setState(() => _selectedIndex = index);
                       },
                       child: Column(

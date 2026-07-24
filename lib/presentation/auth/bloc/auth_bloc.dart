@@ -1,25 +1,53 @@
-import 'package:equatable/equatable.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'dart:async';
 
-import '../../../data/repositories/auth_repository.dart';
+import 'package:equatable/equatable.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../../domain/usecases/auth/get_auth_status_usecase.dart';
+import '../../../domain/usecases/auth/login_usecase.dart';
+import '../../../domain/usecases/auth/logout_usecase.dart';
+import '../../../domain/usecases/auth/reset_password_usecase.dart';
+import '../../../domain/usecases/auth/send_otp_usecase.dart';
+import '../../../domain/usecases/auth/signin_with_facebook_usecase.dart';
+import '../../../domain/usecases/auth/signin_with_google_usecase.dart';
+import '../../../domain/usecases/auth/signup_usecase.dart';
+import '../../../domain/usecases/auth/verify_otp_usecase.dart';
 
 part 'auth_event.dart';
 part 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
-  final AuthRepository _authRepository;
-  final FirebaseAuth _firebaseAuth;
-  final GoogleSignIn _googleSignIn;
+  final LoginUseCase _loginUseCase;
+  final SignUpUseCase _signUpUseCase;
+  final LogoutUseCase _logoutUseCase;
+  final SignInWithGoogleUseCase _googleSignInUseCase;
+  final SignInWithFacebookUseCase _facebookSignInUseCase;
+  final SendOtpUseCase _sendOtpUseCase;
+  final VerifyOtpUseCase _verifyOtpUseCase;
+  final ResetPasswordUseCase _resetPasswordUseCase;
+  final GetAuthStatusUseCase _getAuthStatusUseCase;
+
+  StreamSubscription? _authSubscription;
 
   AuthBloc({
-    required AuthRepository authRepository,
-    FirebaseAuth? firebaseAuth,
-    GoogleSignIn? googleSignIn,
-  }) : _authRepository = authRepository,
-       _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
-       _googleSignIn = googleSignIn ?? GoogleSignIn(),
+    required LoginUseCase loginUseCase,
+    required SignUpUseCase signUpUseCase,
+    required LogoutUseCase logoutUseCase,
+    required SignInWithGoogleUseCase googleSignInUseCase,
+    required SignInWithFacebookUseCase facebookSignInUseCase,
+    required SendOtpUseCase sendOtpUseCase,
+    required VerifyOtpUseCase verifyOtpUseCase,
+    required ResetPasswordUseCase resetPasswordUseCase,
+    required GetAuthStatusUseCase getAuthStatusUseCase,
+  }) : _loginUseCase = loginUseCase,
+       _signUpUseCase = signUpUseCase,
+       _logoutUseCase = logoutUseCase,
+       _googleSignInUseCase = googleSignInUseCase,
+       _facebookSignInUseCase = facebookSignInUseCase,
+       _sendOtpUseCase = sendOtpUseCase,
+       _verifyOtpUseCase = verifyOtpUseCase,
+       _resetPasswordUseCase = resetPasswordUseCase,
+       _getAuthStatusUseCase = getAuthStatusUseCase,
        super(AuthInitial()) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
     on<AuthLoginRequested>(_onAuthLoginRequested);
@@ -30,44 +58,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthSendOtpRequested>(_onAuthSendOtpRequested);
     on<AuthVerifyOtpRequested>(_onAuthVerifyOtpRequested);
     on<AuthFacebookSignInRequested>(_onAuthFacebookSignInRequested);
-  }
-
-  Future<void> _onAuthSendOtpRequested(
-    AuthSendOtpRequested event,
-    Emitter<AuthState> emit,
-  ) async {
-    emit(AuthLoading());
-    try {
-      await _authRepository.sendOtp(email: event.email);
-      emit(AuthOtpSentSuccess());
-    } catch (e) {
-      // Lỗi này chính là dòng "Email này đã được đăng ký!" từ server
-      emit(
-        AuthOtpSentFailure(message: e.toString().replaceAll('Exception: ', '')),
-      );
-    }
-  }
-
-  Future<void> _onAuthForgotPasswordRequested(
-    AuthForgotPasswordRequested event,
-    Emitter<AuthState> emit,
-  ) async {
-    emit(AuthLoading());
-    try {
-      await _authRepository.sendPasswordResetEmail(email: event.email);
-      emit(AuthPasswordResetSent());
-    } catch (e) {
-      emit(AuthFailure(message: e.toString().replaceAll('Exception: ', '')));
-    }
+    on<AuthStateChanged>(_onAuthStateChanged);
   }
 
   Future<void> _onAuthCheckRequested(
     AuthCheckRequested event,
     Emitter<AuthState> emit,
   ) async {
-    final user = _firebaseAuth.currentUser;
-    if (user != null) {
-      emit(AuthAuthenticated(userId: user.uid));
+    _authSubscription?.cancel();
+    _authSubscription = _getAuthStatusUseCase.execute().listen((user) {
+      add(AuthStateChanged(user?.id));
+    });
+  }
+
+  void _onAuthStateChanged(AuthStateChanged event, Emitter<AuthState> emit) {
+    if (event.userId != null) {
+      emit(AuthAuthenticated(userId: event.userId!));
     } else {
       emit(AuthUnauthenticated());
     }
@@ -79,18 +85,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
-      await _authRepository.signIn(
-        email: event.email,
-        password: event.password,
-      );
-      if (_firebaseAuth.currentUser != null) {
-        emit(AuthAuthenticated(userId: _firebaseAuth.currentUser!.uid));
+      final user = await _loginUseCase.execute(event.email, event.password);
+      if (user != null) {
+        emit(AuthAuthenticated(userId: user.id));
       } else {
-        emit(
-          const AuthFailure(
-            message: 'Đăng nhập thất bại: Không tìm thấy người dùng',
-          ),
-        );
+        emit(const AuthFailure(message: 'Đăng nhập thất bại'));
       }
     } catch (e) {
       emit(AuthFailure(message: e.toString().replaceAll('Exception: ', '')));
@@ -103,14 +102,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
-      await _authRepository.signUp(
-        email: event.email,
-        password: event.password,
-      );
-      if (_firebaseAuth.currentUser != null) {
-        emit(AuthAuthenticated(userId: _firebaseAuth.currentUser!.uid));
+      final user = await _signUpUseCase.execute(event.email, event.password);
+      if (user != null) {
+        emit(AuthAuthenticated(userId: user.id));
       } else {
-        emit(const AuthFailure(message: 'Đăng ký thất bại: Vui lòng thử lại'));
+        emit(const AuthFailure(message: 'Đăng ký thất bại'));
       }
     } catch (e) {
       emit(AuthFailure(message: e.toString().replaceAll('Exception: ', '')));
@@ -123,13 +119,27 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
-      // Gọi thẳng xuống Repository
-      final userCredential = await _authRepository.signInWithGoogle();
-
-      if (userCredential != null && userCredential.user != null) {
-        emit(AuthAuthenticated(userId: userCredential.user!.uid));
+      final user = await _googleSignInUseCase.execute();
+      if (user != null) {
+        emit(AuthAuthenticated(userId: user.id));
       } else {
-        // Trường hợp popup hiện lên nhưng người dùng bấm Hủy -> Quay về trạng thái chưa đăng nhập
+        emit(AuthUnauthenticated());
+      }
+    } catch (e) {
+      emit(AuthFailure(message: e.toString().replaceAll('Exception: ', '')));
+    }
+  }
+
+  Future<void> _onAuthFacebookSignInRequested(
+    AuthFacebookSignInRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(AuthLoading());
+    try {
+      final user = await _facebookSignInUseCase.execute();
+      if (user != null) {
+        emit(AuthAuthenticated(userId: user.id));
+      } else {
         emit(AuthUnauthenticated());
       }
     } catch (e) {
@@ -141,8 +151,23 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthLogoutRequested event,
     Emitter<AuthState> emit,
   ) async {
-    await _authRepository.signOut();
+    await _logoutUseCase.execute();
     emit(AuthUnauthenticated());
+  }
+
+  Future<void> _onAuthSendOtpRequested(
+    AuthSendOtpRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(AuthLoading());
+    try {
+      await _sendOtpUseCase.execute(event.email);
+      emit(AuthOtpSentSuccess());
+    } catch (e) {
+      emit(
+        AuthOtpSentFailure(message: e.toString().replaceAll('Exception: ', '')),
+      );
+    }
   }
 
   Future<void> _onAuthVerifyOtpRequested(
@@ -151,7 +176,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
-      await _authRepository.verifyOtp(email: event.email, otp: event.otp);
+      await _verifyOtpUseCase.execute(event.email, event.otp);
       emit(AuthOtpVerifiedSuccess());
     } catch (e) {
       emit(
@@ -162,23 +187,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-  Future<void> _onAuthFacebookSignInRequested(
-    AuthFacebookSignInRequested event,
+  Future<void> _onAuthForgotPasswordRequested(
+    AuthForgotPasswordRequested event,
     Emitter<AuthState> emit,
   ) async {
     emit(AuthLoading());
     try {
-      // Gọi hàm từ Repository mà bạn vừa mới viết
-      final userCredential = await _authRepository.signInWithFacebook();
-
-      if (userCredential != null && userCredential.user != null) {
-        emit(AuthAuthenticated(userId: userCredential.user!.uid));
-      } else {
-        // Người dùng bấm Hủy popup Facebook
-        emit(AuthUnauthenticated());
-      }
+      await _resetPasswordUseCase.execute(event.email);
+      emit(AuthPasswordResetSent());
     } catch (e) {
       emit(AuthFailure(message: e.toString().replaceAll('Exception: ', '')));
     }
+  }
+
+  @override
+  Future<void> close() {
+    _authSubscription?.cancel();
+    return super.close();
   }
 }
