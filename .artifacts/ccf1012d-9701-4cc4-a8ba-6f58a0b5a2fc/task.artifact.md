@@ -1,11 +1,10 @@
-# Tasks: Optimize Alarm Logic - Prioritization and Mutual Exclusion
+# Tasks: Tối ưu hóa UI Cảnh báo Giấc ngủ (Glow & Pill)
 
-- [x] **Step 1: Domain Utilities**
-    - [x] Add `hasSameScheduleConfig` to `SleepMathUtils`.
-    - [x] Add `isLaterBedTime` to `SleepMathUtils`.
-- [x] **Step 2: Bloc Implementation**
-    - [x] Update `_onToggleAlarmRequested` in `AlarmBloc` to disable conflicting alarms.
-    - [x] Update `_onSaveAlarmRequested` in `AlarmBloc` to disable conflicting alarms when saving a new active one.
-- [x] **Step 3: Verification**
-    - [x] Verify automatic disabling of conflicting alarms on toggle.
-    - [x] Verify prioritization of later bedtime when saving.
+- [x] **Bước 1: Cập nhật Giao diện SetAlarmPage**
+    - [x] Xóa bỏ hàm `_buildQualityBadge` và lời gọi của nó.
+    - [x] Thêm logic xác định màu sắc và icon dựa trên `WakeUpQuality`.
+    - [x] Áp dụng hiệu ứng `BoxShadow` (Glow) cho container nội dung ở tâm vòng xoay.
+    - [x] Cập nhật style cho "Viên thuốc" chu kỳ (màu sắc, icon).
+- [x] **Bước 2: Kiểm tra & Tinh chỉnh**
+    - [x] Đảm bảo hiệu ứng Glow không quá gắt, mờ ảo tinh tế.
+    - [x] Kiểm tra khả năng đọc của văn bản trên nền màu mới.

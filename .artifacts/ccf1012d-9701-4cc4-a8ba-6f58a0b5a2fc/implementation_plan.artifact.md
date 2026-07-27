@@ -1,37 +1,28 @@
-# Cảnh báo Giai đoạn Giấc ngủ trong Thiết lập Báo thức
+# Tối ưu hóa UI Cảnh báo Giấc ngủ (Glow & Pill Integration)
 
-Kế hoạch này giúp người dùng nhận biết liệu khung giờ họ tự thiết lập có rơi vào các giai đoạn nhạy cảm như Giấc ngủ sâu (SWS) hay Giấc ngủ mơ (REM) hay không, từ đó giúp họ thức dậy tỉnh táo nhất.
+Kế hoạch này kết hợp hiệu ứng hào quang động và tích hợp màu sắc vào thành phần có sẵn để thông báo chất lượng thức giấc một cách tinh tế, không làm tốn diện tích giao diện.
 
 ## User Review Required
 
-> [!IMPORTANT]
-> **Logic Phân loại:**
-> - **An toàn (Tỉnh táo):** Thức dậy vào đầu hoặc cuối chu kỳ (0-20p hoặc 80-90p của chu kỳ 90p).
-> - **Cảnh báo (Giấc ngủ sâu - SWS):** Thức dậy vào giữa chu kỳ (20-50p). Dễ gây lờ đờ, đau đầu.
-> - **Cảnh báo (Giấc ngủ mơ - REM):** Thức dậy vào cuối chu kỳ (50-80p). Dễ gây mệt mỏi, gián đoạn giấc mơ.
+> [!NOTE]
+> Tôi sẽ loại bỏ Badge cảnh báo riêng biệt và thay thế bằng cách nhuộm màu trực tiếp cho nhãn "X Chu kỳ" kèm theo hiệu ứng tỏa sáng (Glow) ở trung tâm vòng tròn.
 
 ## Proposed Changes
 
-### 1. Domain Layer (Logic phân tích)
-
-#### [MODIFY] [sleep_math_utils.dart](file:///E:/TuHoc/android/flutter/sleeping_app_flutter/lib/domain/utils/sleep_math_utils.dart)
-*   Thêm enum `WakeUpQuality`: `optimal` (An toàn), `deepSleepRisk` (SWS), `remRisk` (REM).
-*   Thêm hàm `getWakeUpQuality(int sleepMinutes)`: Tính toán `remainder = sleepMinutes % 90` và trả về chất lượng tương ứng.
-
----
-
-### 2. Presentation Layer (Giao diện)
+### 1. Presentation Layer (UI Refinement)
 
 #### [MODIFY] [set_alarm_page.dart](file:///E:/TuHoc/android/flutter/sleeping_app_flutter/lib/presentation/alarms/pages/set_alarm_page.dart)
-*   Hiển thị một Badge hoặc Text phản hồi ngay dưới phần "X Chu kỳ".
-*   Sử dụng màu sắc để cảnh báo:
-    *   **Xanh:** Tuyệt vời, bạn sẽ thức dậy tỉnh táo.
-    *   **Vàng/Cam:** Cảnh báo REM, có thể hơi mệt.
-    *   **Đỏ:** Cảnh báo Giấc ngủ sâu, rất dễ bị lờ đờ (Sleep Inertia).
+*   **Xóa bỏ `_buildQualityBadge`**: Loại bỏ thành phần gây tốn diện tích.
+*   **Nâng cấp "Viên thuốc" Chu kỳ**:
+    *   Đổi màu `backgroundColor` và `textColor` dựa trên `WakeUpQuality`.
+    *   Thêm icon nhỏ tương ứng (Check/Warning) vào trong viên thuốc.
+*   **Thêm hiệu ứng Hào quang (Glow)**:
+    *   Thêm `BoxShadow` với màu sắc tương ứng (`green`, `orange`, `red`) vào container chứa nội dung ở tâm vòng xoay.
+    *   Hiệu ứng sẽ mờ ảo (spreadRadius lớn, blurRadius lớn) để tạo cảm giác sang trọng.
 
 ## Verification Plan
 
 ### Manual Verification
-*   Kéo vòng xoay sao cho thời gian ngủ là 7h 30p (5.0 chu kỳ) -> Hiện "Tuyệt vời".
-*   Kéo vòng xoay sao cho thời gian ngủ là 7h 00p (Remainder ~ 30p) -> Hiện "Cảnh báo Giấc ngủ sâu".
-*   Kéo vòng xoay sao cho thời gian ngủ là 8h 00p (Remainder ~ 60p) -> Hiện "Cảnh báo Giấc ngủ REM".
+*   **Trạng thái Tỉnh táo**: Tâm vòng xoay có hào quang xanh nhẹ, nhãn chu kỳ màu xanh.
+*   **Trạng thái Cảnh báo SWS**: Tâm vòng xoay có hào quang đỏ mờ, nhãn chu kỳ màu đỏ kèm icon cảnh báo.
+*   **Trạng thái Cảnh báo REM**: Tâm vòng xoay có hào quang cam mờ, nhãn chu kỳ màu cam.

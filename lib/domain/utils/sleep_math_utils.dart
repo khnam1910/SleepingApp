@@ -1,8 +1,26 @@
 import '../entities/alarm_schedules_entity.dart';
 import '../entities/sleep_conflict.dart';
 import '../entities/sleep_cycle.dart';
+import '../entities/wake_up_quality.dart';
 
 class SleepMathUtils {
+  /// Phân tích chất lượng thức dậy dựa trên tổng số phút ngủ
+  /// Quy tắc: Chu kỳ 90 phút
+  /// - 0-20p hoặc 80-90p: Optimal (Ngủ nông)
+  /// - 20-50p: Deep Sleep Risk (SWS)
+  /// - 50-80p: REM Risk (REM)
+  static WakeUpQuality getWakeUpQuality(int sleepMinutes) {
+    final int remainder = sleepMinutes % 90;
+
+    if (remainder <= 20 || remainder >= 80) {
+      return WakeUpQuality.optimal;
+    } else if (remainder > 20 && remainder <= 50) {
+      return WakeUpQuality.deepSleepRisk;
+    } else {
+      return WakeUpQuality.remRisk;
+    }
+  }
+
   /// Tính toán danh sách các chu kỳ giấc ngủ dựa trên mốc thời gian cơ sở
   static List<SleepCycle> calculateSleepCycles({
     required int baseHour,

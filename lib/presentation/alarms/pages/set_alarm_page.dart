@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/models/alarm_schedules_model.dart';
 import '../../../domain/entities/alarm_schedules_entity.dart';
 import '../../../domain/entities/sleep_conflict.dart';
+import '../../../domain/entities/wake_up_quality.dart';
 import '../../../domain/utils/sleep_math_utils.dart';
 import '../bloc/alarms_bloc.dart';
 import '../bloc/alarms_event.dart';
@@ -168,6 +169,25 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
       _wakeTime.minute,
     );
     final cycles = (sleepMins / 90).toStringAsFixed(1);
+    final quality = SleepMathUtils.getWakeUpQuality(sleepMins);
+
+    // Xác định màu sắc và icon cho chất lượng thức giấc
+    Color qualityColor;
+    IconData qualityIcon;
+    switch (quality) {
+      case WakeUpQuality.optimal:
+        qualityColor = Colors.green;
+        qualityIcon = Icons.check_circle_rounded;
+        break;
+      case WakeUpQuality.deepSleepRisk:
+        qualityColor = colors.error;
+        qualityIcon = Icons.warning_rounded;
+        break;
+      case WakeUpQuality.remRisk:
+        qualityColor = Colors.orange;
+        qualityIcon = Icons.info_rounded;
+        break;
+    }
 
     return Scaffold(
       backgroundColor: colors.surface,
@@ -240,34 +260,61 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                                 ),
                               ),
                               const SizedBox(height: 2),
-                              Text(
-                                sleepMins.formatAsDuration(),
-                                style: TextStyle(
-                                  fontSize: 36,
-                                  fontWeight: FontWeight.w800,
-                                  color: colors.onSurface,
-                                  letterSpacing: -1.0,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
+                              // Con số thời gian với hiệu ứng Glow
                               Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
-                                ),
                                 decoration: BoxDecoration(
-                                  color: colors.primaryContainer.withOpacity(
-                                    0.5,
-                                  ),
-                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: qualityColor.withOpacity(0.3),
+                                      blurRadius: 40,
+                                      spreadRadius: 5,
+                                    ),
+                                  ],
                                 ),
                                 child: Text(
-                                  '$cycles Chu kỳ',
+                                  sleepMins.formatAsDuration(),
                                   style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: colors.primary,
+                                    fontSize: 36,
+                                    fontWeight: FontWeight.w800,
+                                    color: colors.onSurface,
+                                    letterSpacing: -1.0,
                                   ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              // "Viên thuốc" chu kỳ tích hợp màu sắc và icon
+                              AnimatedContainer(
+                                duration: const Duration(milliseconds: 300),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: qualityColor.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: qualityColor.withOpacity(0.3),
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      qualityIcon,
+                                      size: 14,
+                                      color: qualityColor,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '$cycles Chu kỳ',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: qualityColor,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
