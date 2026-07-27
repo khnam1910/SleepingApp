@@ -15,36 +15,70 @@ class AlarmBloc extends Bloc<AlarmEvent, AlarmState> {
     required GetAlarmsUseCase getAlarmsUseCase,
   }) : _saveAlarmUseCase = saveAlarmUseCase,
        _getAlarmsUseCase = getAlarmsUseCase,
-       super(AlarmInitial()) {
+       super(const AlarmState()) {
     on<CalculateCyclesRequested>(_onCalculateCyclesRequested);
     on<SaveAlarmRequested>(_onSaveAlarmRequested);
     on<LoadAlarmsRequested>(_onLoadAlarmsRequested);
     on<ToggleAlarmRequested>(_onToggleAlarmRequested);
+    on<SelectCycleRequested>(_onSelectCycleRequested);
   }
 
   void _onCalculateCyclesRequested(
     CalculateCyclesRequested event,
     Emitter<AlarmState> emit,
   ) {
-    // Sử dụng SleepMathUtils từ Domain Layer
     final results = SleepMathUtils.calculateSleepCycles(
       baseHour: event.time.hour,
       baseMinute: event.time.minute,
       isWakeUpTime: event.toggleIndex == 0,
     );
-    emit(AlarmCalculated(results, event.time, event.toggleIndex));
+
+    emit(
+      state.copyWith(
+        calculatedCycles: results,
+        targetTime: event.time,
+        toggleIndex: event.toggleIndex,
+        selectedCycleCount: 6,
+        status: AlarmStatus.calculationSuccess,
+      ),
+    );
+  }
+
+  void _onSelectCycleRequested(
+    SelectCycleRequested event,
+    Emitter<AlarmState> emit,
+  ) {
+    emit(state.copyWith(selectedCycleCount: event.selectedCycles));
   }
 
   Future<void> _onSaveAlarmRequested(
     SaveAlarmRequested event,
     Emitter<AlarmState> emit,
   ) async {
-    emit(AlarmSaving());
+    emit(state.copyWith(status: AlarmStatus.saving));
     try {
-      await _saveAlarmUseCase.execute(event.alarmModel);
-      emit(AlarmSaveSuccess());
+      final newAlarm = event.alarmModel;
+
+      // Nếu báo thức mới đang Bật, tự động tắt các báo thức xung đột giờ thức
+      if (newAlarm.isEnabled) {
+        for (var alarm in state.alarms) {
+          if (alarm.id != newAlarm.id &&
+              alarm.isEnabled &&
+              SleepMathUtils.hasSameScheduleConfig(newAlarm, alarm)) {
+            await _saveAlarmUseCase.execute(alarm.copyWith(isEnabled: false));
+          }
+        }
+      }
+
+      await _saveAlarmUseCase.execute(newAlarm);
+      emit(state.copyWith(status: AlarmStatus.saveSuccess));
     } catch (e) {
-      emit(AlarmSaveFailure(e.toString()));
+      emit(
+        state.copyWith(
+          status: AlarmStatus.failure,
+          errorMessage: e.toString(),
+        ),
+      );
     }
   }
 
@@ -52,16 +86,25 @@ class AlarmBloc extends Bloc<AlarmEvent, AlarmState> {
     LoadAlarmsRequested event,
     Emitter<AlarmState> emit,
   ) async {
-    // Chỉ hiện loading nếu chưa có dữ liệu nào (tránh flicker khi refresh)
-    if (state is! AlarmsLoaded) {
-      emit(AlarmsLoading());
+    if (state.alarms.isEmpty) {
+      emit(state.copyWith(status: AlarmStatus.loading));
     }
 
     try {
       final alarms = await _getAlarmsUseCase.execute();
-      emit(AlarmsLoaded(alarms));
+      emit(
+        state.copyWith(
+          alarms: alarms,
+          status: AlarmStatus.loadSuccess,
+        ),
+      );
     } catch (e) {
-      emit(AlarmSaveFailure(e.toString()));
+      emit(
+        state.copyWith(
+          status: AlarmStatus.failure,
+          errorMessage: e.toString(),
+        ),
+      );
     }
   }
 
@@ -69,27 +112,52 @@ class AlarmBloc extends Bloc<AlarmEvent, AlarmState> {
     ToggleAlarmRequested event,
     Emitter<AlarmState> emit,
   ) async {
-    final currentState = state;
-    if (currentState is AlarmsLoaded) {
-      // 1. CẬP NHẬT TỨC THÌ (Optimistic UI)
-      final updatedAlarms = currentState.alarms.map((a) {
-        return a.id == event.alarm.id
-            ? event.alarm.copyWith(isEnabled: event.isEnabled)
-            : a;
-      }).toList();
+    final previousAlarms = state.alarms;
+    final toggledAlarm = event.alarm;
+    final newStateEnabled = event.isEnabled;
 
-      emit(AlarmsLoaded(updatedAlarms));
-
-      // 2. LƯU NGẦM XUỐNG DATABASE
-      try {
-        final updatedAlarm = event.alarm.copyWith(isEnabled: event.isEnabled);
-        await _saveAlarmUseCase.execute(updatedAlarm);
-        // Không cần gọi LoadAlarmsRequested nữa vì local đã chuẩn rồi
-      } catch (e) {
-        // Nếu lỗi thì quay lại danh sách cũ
-        emit(AlarmsLoaded(currentState.alarms));
-        emit(AlarmSaveFailure(e.toString()));
+    // 1. Optimistic UI update logic
+    List<dynamic> updatedAlarmsList = state.alarms.map((a) {
+      if (a.id == toggledAlarm.id) {
+        return toggledAlarm.copyWith(isEnabled: newStateEnabled);
       }
+      // Nếu bật một báo thức, tắt các báo thức khác trùng cấu hình (giờ thức/ngày)
+      if (newStateEnabled &&
+          a.isEnabled &&
+          SleepMathUtils.hasSameScheduleConfig(toggledAlarm, a)) {
+        return a.copyWith(isEnabled: false);
+      }
+      return a;
+    }).toList();
+
+    emit(state.copyWith(alarms: updatedAlarmsList.cast()));
+
+    // 2. Persist to database
+    try {
+      // Lưu báo thức vừa gạt
+      await _saveAlarmUseCase.execute(
+        toggledAlarm.copyWith(isEnabled: newStateEnabled),
+      );
+
+      // Lưu các báo thức bị tắt tự động (nếu có)
+      if (newStateEnabled) {
+        for (var alarm in previousAlarms) {
+          if (alarm.id != toggledAlarm.id &&
+              alarm.isEnabled &&
+              SleepMathUtils.hasSameScheduleConfig(toggledAlarm, alarm)) {
+            await _saveAlarmUseCase.execute(alarm.copyWith(isEnabled: false));
+          }
+        }
+      }
+    } catch (e) {
+      // Rollback on failure
+      emit(
+        state.copyWith(
+          alarms: previousAlarms,
+          status: AlarmStatus.failure,
+          errorMessage: e.toString(),
+        ),
+      );
     }
   }
 }

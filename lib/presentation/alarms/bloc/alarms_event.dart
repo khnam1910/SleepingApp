@@ -28,3 +28,9 @@ class ToggleAlarmRequested extends AlarmEvent {
 
   ToggleAlarmRequested({required this.alarm, required this.isEnabled});
 }
+
+class SelectCycleRequested extends AlarmEvent {
+  final int selectedCycles;
+
+  SelectCycleRequested(this.selectedCycles);
+}

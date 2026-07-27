@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../data/models/alarm_schedules_model.dart';
 import '../../../domain/entities/alarm_schedules_entity.dart';
+import '../../../domain/entities/sleep_conflict.dart';
 import '../../../domain/utils/sleep_math_utils.dart';
 import '../bloc/alarms_bloc.dart';
 import '../bloc/alarms_event.dart';
@@ -26,6 +27,64 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
   bool _isVibrationActive = true;
   final List<String> _dayLabels = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
   bool _isDialDragging = false;
+
+  void _saveWithConflictCheck() {
+    List<int> repeatDays = [];
+    for (int i = 0; i < _selectedDays.length; i++) {
+      if (_selectedDays[i]) repeatDays.add(i + 2);
+    }
+
+    final alarmModel = AlarmScheduleModel(
+      id:
+          widget.existingAlarm?.id ??
+          DateTime.now().millisecondsSinceEpoch.toString(),
+      userId: widget.existingAlarm?.userId ?? '',
+      wakeUpTime: _wakeTime.formatHHmm(),
+      bedTime: _bedTime.formatHHmm(),
+      repeatDays: repeatDays,
+      isSmartWake: widget.existingAlarm?.isSmartWake ?? false,
+      smartWakeWindow: widget.existingAlarm?.smartWakeWindow ?? 30,
+      isEnabled: widget.existingAlarm?.isEnabled ?? true,
+    );
+
+    final alarmBloc = context.read<AlarmBloc>();
+    final conflict = SleepMathUtils.analyzeConflict(
+      alarmModel,
+      alarmBloc.state.alarms,
+    );
+
+    if (conflict != null) {
+      _showConflictDialog(conflict, () {
+        alarmBloc.add(SaveAlarmRequested(alarmModel));
+      });
+    } else {
+      alarmBloc.add(SaveAlarmRequested(alarmModel));
+    }
+  }
+
+  void _showConflictDialog(SleepConflict conflict, VoidCallback onConfirm) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Phát hiện xung đột'),
+        content: Text('${conflict.message}\n\nBạn vẫn muốn lưu chứ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              onConfirm();
+            },
+            child: const Text('Vẫn lưu'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -425,15 +484,15 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
               ),
               child: BlocListener<AlarmBloc, AlarmState>(
                 listener: (context, state) {
-                  if (state is AlarmSaveSuccess) {
+                  if (state.status == AlarmStatus.saveSuccess) {
                     context.read<AlarmBloc>().add(LoadAlarmsRequested());
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Đã lưu lịch trình ngủ!')),
                     );
                     Navigator.pop(context);
-                  } else if (state is AlarmSaveFailure) {
+                  } else if (state.status == AlarmStatus.failure) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Lỗi: ${state.error}')),
+                      SnackBar(content: Text('Lỗi: ${state.errorMessage}')),
                     );
                   }
                 },
@@ -441,30 +500,7 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: () {
-                      List<int> repeatDays = [];
-                      for (int i = 0; i < _selectedDays.length; i++) {
-                        if (_selectedDays[i]) repeatDays.add(i + 2);
-                      }
-
-                      final alarmModel = AlarmScheduleModel(
-                        id:
-                            widget.existingAlarm?.id ??
-                            DateTime.now().millisecondsSinceEpoch.toString(),
-                        userId: widget.existingAlarm?.userId ?? '',
-                        wakeUpTime: _wakeTime.formatHHmm(),
-                        bedTime: _bedTime.formatHHmm(),
-                        repeatDays: repeatDays,
-                        isSmartWake: widget.existingAlarm?.isSmartWake ?? false,
-                        smartWakeWindow:
-                            widget.existingAlarm?.smartWakeWindow ?? 30,
-                        isEnabled: widget.existingAlarm?.isEnabled ?? true,
-                      );
-
-                      context.read<AlarmBloc>().add(
-                        SaveAlarmRequested(alarmModel),
-                      );
-                    },
+                    onPressed: _saveWithConflictCheck,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: colors.primary,
                       foregroundColor: colors.onPrimary,
@@ -475,7 +511,7 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                     ),
                     child: BlocBuilder<AlarmBloc, AlarmState>(
                       builder: (context, state) {
-                        if (state is AlarmSaving) {
+                        if (state.status == AlarmStatus.saving) {
                           return CircularProgressIndicator(
                             color: colors.onPrimary,
                           );

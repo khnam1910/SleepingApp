@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../domain/entities/sleep_cycle.dart';
 import 'duration_extension.dart';
 
@@ -6,8 +7,8 @@ extension SleepCycleUIX on SleepCycle {
   /// Chuyển đổi sang TimeOfDay để UI hiển thị
   TimeOfDay get time => TimeOfDay(hour: hour, minute: minute);
 
-  /// Chuỗi thời lượng ngủ (VD: 7h 30p)
-  String get durationStr => sleepMinutes.formatAsDuration();
+  /// Chuỗi thời lượng ngủ (VD: 7h 45p - Bao gồm thời gian chìm vào giấc ngủ)
+  String get durationStr => totalMinutes.formatAsDuration();
 
   /// Số nấc pin dựa trên số chu kỳ (Mượn lại logic cũ)
   int get batteryBars {

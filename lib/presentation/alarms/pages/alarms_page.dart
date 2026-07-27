@@ -3,7 +3,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../domain/entities/sleep_cycle.dart';
 import '../../global_widgets/shared_sleep_widgets.dart';
 import '../../home/widgets/shared_app_bar.dart';
 import '../bloc/alarms_bloc.dart';
@@ -214,49 +213,55 @@ class _AlarmsPageState extends State<AlarmsPage> {
               padding: EdgeInsets.zero,
               children: [
                 BlocBuilder<AlarmBloc, AlarmState>(
+                  buildWhen: (previous, current) =>
+                      previous.alarms != current.alarms ||
+                      previous.status != current.status,
                   builder: (context, state) {
-                    if (state is AlarmsLoaded) {
-                      final alarms = state.alarms;
+                    if (state.status == AlarmStatus.loading &&
+                        state.alarms.isEmpty) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
 
-                      if (alarms.isEmpty) {
-                        return const Center(
+                    if (state.alarms.isEmpty) {
+                      return const Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 20),
                           child: Text("Chưa có lịch trình nào"),
-                        );
-                      }
-
-                      return ListView(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        padding: EdgeInsets.zero,
-                        children: alarms.map((alarm) {
-                          return SavedAlarmCard(
-                            title: 'Lịch trình',
-                            wakeTime: alarm.wakeUpTime,
-                            bedTime: alarm.bedTime,
-                            duration: alarm.sleepDurationText,
-                            days: alarm.repeatDaysText,
-                            isActive: alarm.isEnabled,
-                            onToggle: (val) {
-                              context.read<AlarmBloc>().add(
-                                ToggleAlarmRequested(
-                                  alarm: alarm,
-                                  isEnabled: val,
-                                ),
-                              );
-                            },
-                            colors: colors,
-                          );
-                        }).toList(),
+                        ),
                       );
                     }
-                    return const SizedBox.shrink();
+
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      padding: EdgeInsets.zero,
+                      itemCount: state.alarms.length,
+                      itemBuilder: (context, index) {
+                        final alarm = state.alarms[index];
+                        return SavedAlarmCard(
+                          title: 'Lịch trình',
+                          wakeTime: alarm.wakeUpTime,
+                          bedTime: alarm.bedTime,
+                          duration: alarm.sleepDurationText,
+                          days: alarm.repeatDaysText,
+                          isActive: alarm.isEnabled,
+                          onToggle: (val) {
+                            context.read<AlarmBloc>().add(
+                              ToggleAlarmRequested(
+                                alarm: alarm,
+                                isEnabled: val,
+                              ),
+                            );
+                          },
+                          colors: colors,
+                        );
+                      },
+                    );
                   },
                 ),
                 GestureDetector(
                   onTap: () {
-                    // Lấy bloc từ context hiện tại (trước khi push sang Route mới)
                     final alarmBloc = context.read<AlarmBloc>();
-
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -310,27 +315,28 @@ class _AlarmsPageState extends State<AlarmsPage> {
               onChanged: (index) {
                 setState(() => _selectedToggleIndex = index);
                 final state = context.read<AlarmBloc>().state;
-                if (state is AlarmCalculated) {
-                  context.read<AlarmBloc>().add(
-                    CalculateCyclesRequested(
-                      time: state.targetTime,
-                      toggleIndex: index,
-                    ),
-                  );
-                }
+                final targetTime = state.targetTime ?? _targetTime;
+
+                context.read<AlarmBloc>().add(
+                  CalculateCyclesRequested(
+                    time: targetTime,
+                    toggleIndex: index,
+                  ),
+                );
               },
               colors: colors,
             ),
             const SizedBox(height: 16),
             BlocBuilder<AlarmBloc, AlarmState>(
+              buildWhen: (previous, current) =>
+                  previous.calculatedCycles != current.calculatedCycles ||
+                  previous.targetTime != current.targetTime ||
+                  previous.toggleIndex != current.toggleIndex ||
+                  previous.selectedCycleCount != current.selectedCycleCount,
               builder: (context, state) {
-                bool hasCalculated = false;
-                List<SleepCycle> cycles = [];
-
-                if (state is AlarmCalculated) {
-                  hasCalculated = true;
-                  cycles = state.cycles;
-                }
+                final cycles = state.calculatedCycles;
+                final hasCalculated = cycles.isNotEmpty;
+                final displayTime = state.targetTime ?? _targetTime;
 
                 String cardTimeLabel = _selectedToggleIndex == 0
                     ? 'Giờ đi ngủ'
@@ -366,7 +372,7 @@ class _AlarmsPageState extends State<AlarmsPage> {
                               const SizedBox(width: 16),
                               Expanded(
                                 child: Text(
-                                  _targetTime.formatHHmm(),
+                                  displayTime.formatHHmm(),
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
@@ -446,14 +452,22 @@ class _AlarmsPageState extends State<AlarmsPage> {
                       ...cycles.map((cycle) {
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 12.0),
-                          child: SleepCycleCard(
-                            timeLabel: cardTimeLabel,
-                            wakeTime: cycle.time.formatHHmm(),
-                            duration: cycle.durationStr,
-                            cycles: cycle.cycles,
-                            batteryBars: cycle.batteryBars,
-                            isHighlighted: cycle.isOptimal,
-                            colors: colors,
+                          child: GestureDetector(
+                            onTap: () {
+                              context.read<AlarmBloc>().add(
+                                SelectCycleRequested(cycle.cycles),
+                              );
+                            },
+                            child: SleepCycleCard(
+                              timeLabel: cardTimeLabel,
+                              wakeTime: cycle.time.formatHHmm(),
+                              duration: cycle.durationStr,
+                              cycles: cycle.cycles,
+                              batteryBars: cycle.batteryBars,
+                              isHighlighted:
+                                  cycle.cycles == state.selectedCycleCount,
+                              colors: colors,
+                            ),
                           ),
                         );
                       }),
@@ -464,7 +478,7 @@ class _AlarmsPageState extends State<AlarmsPage> {
                         child: ElevatedButton.icon(
                           onPressed: () {
                             print(
-                              "Sẽ lưu mốc giờ: ${_targetTime.formatHHmm()}",
+                              "Sẽ lưu mốc giờ: ${displayTime.formatHHmm()}",
                             );
                           },
                           icon: const Icon(

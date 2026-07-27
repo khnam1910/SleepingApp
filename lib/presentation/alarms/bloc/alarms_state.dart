@@ -1,37 +1,66 @@
+import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
+
 import '../../../domain/entities/alarm_schedules_entity.dart';
 import '../../../domain/entities/sleep_cycle.dart';
 
-// --- ĐỊNH NGHĨA CÁC TRẠNG THÁI ---
-abstract class AlarmState {}
-
-class AlarmInitial extends AlarmState {}
-
-// Các trạng thái của việc TÍNH TOÁN
-class AlarmCalculated extends AlarmState {
-  final List<SleepCycle> cycles;
-  final TimeOfDay targetTime;
-  final int toggleIndex;
-
-  AlarmCalculated(this.cycles, this.targetTime, this.toggleIndex);
+enum AlarmStatus {
+  initial,
+  loading,
+  failure,
+  saving,
+  saveSuccess,
+  calculationSuccess,
+  loadSuccess,
 }
 
-// Các trạng thái của việc LƯU BÁO THỨC
-class AlarmSaving extends AlarmState {}
-
-class AlarmSaveSuccess extends AlarmState {}
-
-class AlarmSaveFailure extends AlarmState {
-  final String error;
-
-  AlarmSaveFailure(this.error);
-}
-
-class AlarmsLoading extends AlarmState {}
-
-// Trạng thái mang theo danh sách báo thức đã tải thành công
-class AlarmsLoaded extends AlarmState {
+class AlarmState extends Equatable {
   final List<AlarmSchedule> alarms;
+  final List<SleepCycle> calculatedCycles;
+  final TimeOfDay? targetTime;
+  final int toggleIndex;
+  final int selectedCycleCount; // New property
+  final AlarmStatus status;
+  final String? errorMessage;
 
-  AlarmsLoaded(this.alarms);
+  const AlarmState({
+    this.alarms = const [],
+    this.calculatedCycles = const [],
+    this.targetTime,
+    this.toggleIndex = 0,
+    this.selectedCycleCount = 6, // Default to 6 (Optimal)
+    this.status = AlarmStatus.initial,
+    this.errorMessage,
+  });
+
+  AlarmState copyWith({
+    List<AlarmSchedule>? alarms,
+    List<SleepCycle>? calculatedCycles,
+    TimeOfDay? targetTime,
+    int? toggleIndex,
+    int? selectedCycleCount,
+    AlarmStatus? status,
+    String? errorMessage,
+  }) {
+    return AlarmState(
+      alarms: alarms ?? this.alarms,
+      calculatedCycles: calculatedCycles ?? this.calculatedCycles,
+      targetTime: targetTime ?? this.targetTime,
+      toggleIndex: toggleIndex ?? this.toggleIndex,
+      selectedCycleCount: selectedCycleCount ?? this.selectedCycleCount,
+      status: status ?? this.status,
+      errorMessage: errorMessage ?? this.errorMessage,
+    );
+  }
+
+  @override
+  List<Object?> get props => [
+    alarms,
+    calculatedCycles,
+    targetTime,
+    toggleIndex,
+    selectedCycleCount,
+    status,
+    errorMessage,
+  ];
 }
