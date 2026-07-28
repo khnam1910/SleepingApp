@@ -5,6 +5,7 @@ import '../../../core/utils/app_validator.dart';
 import '../bloc/auth_bloc.dart';
 import '../widgets/custom_label_input.dart';
 import '../widgets/custom_text_field.dart';
+import '../../../core/utils/top_notification_helper.dart';
 
 class CreatePasswordPage extends StatefulWidget {
   // 1. THÊM BIẾN EMAIL: Nhận từ trang Register truyền sang
@@ -49,20 +50,18 @@ class _CreatePasswordPageState extends State<CreatePasswordPage> {
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated) {
-          // Khi tạo tài khoản thành công
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Đăng ký tài khoản thành công!')),
+          showTopNotification(
+            context,
+            'Đăng ký tài khoản thành công!',
+            color: Colors.green,
+            icon: Icons.check_circle_outline_rounded,
           );
-
-          // TODO: Chuyển hướng người dùng về Trang chủ (Home) và xóa lịch sử trang
-          // Ví dụ: Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
         } else if (state is AuthFailure) {
-          // Khi lỗi (ví dụ: email đã tồn tại, lỗi mạng...)
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: Colors.red,
-            ),
+          showTopNotification(
+            context,
+            state.message,
+            color: Colors.red,
+            icon: Icons.error_outline_rounded,
           );
         }
       },

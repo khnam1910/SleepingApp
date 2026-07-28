@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/utils/top_notification_helper.dart';
 import '../../../data/models/alarm_schedules_model.dart';
 import '../../../domain/entities/alarm_schedules_entity.dart';
 import '../../../domain/entities/sleep_conflict.dart';
@@ -158,6 +159,74 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
     );
   }
 
+  void _applyQuickPick(int cycles) {
+    // Logic: Giữ nguyên giờ thức, lùi giờ ngủ lại (cycles * 90) + 15p
+    final int wakeTotalMins = _wakeTime.hour * 60 + _wakeTime.minute;
+    final int sleepMins = (cycles * 90) + 15;
+
+    int bedTotalMins = (wakeTotalMins - sleepMins + 1440) % 1440;
+
+    setState(() {
+      _bedTime = TimeOfDay(
+        hour: bedTotalMins ~/ 60,
+        minute: bedTotalMins % 60,
+      );
+    });
+  }
+
+  Widget _buildQuickPicks(ColorScheme colors) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _buildPickChip('7.5 GIỜ', () => _applyQuickPick(5), colors),
+        const SizedBox(width: 12),
+        _buildPickChip('9 GIỜ', () => _applyQuickPick(6), colors, isBest: true),
+      ],
+    );
+  }
+
+  Widget _buildPickChip(
+    String label,
+    VoidCallback onTap,
+    ColorScheme colors, {
+    bool isBest = false,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isBest
+              ? colors.primary.withValues(alpha: 0.1)
+              : colors.surfaceContainerHighest.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isBest
+                ? colors.primary.withValues(alpha: 0.5)
+                : colors.outlineVariant.withValues(alpha: 0.2),
+          ),
+        ),
+        child: Row(
+          children: [
+            if (isBest) ...[
+              Icon(Icons.auto_awesome, size: 12, color: colors.primary),
+              const SizedBox(width: 6),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: isBest ? colors.primary : colors.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -221,10 +290,12 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                 Container(
                   padding: const EdgeInsets.only(top: 32, bottom: 24),
                   decoration: BoxDecoration(
-                    color: colors.surfaceContainerHighest.withOpacity(0.3),
+                    color: colors.surfaceContainerHighest.withValues(
+                      alpha: 0.3,
+                    ),
                     borderRadius: BorderRadius.circular(36),
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.1),
+                      color: Colors.white.withValues(alpha: 0.1),
                       width: 1.5,
                     ),
                   ),
@@ -266,7 +337,9 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                                 decoration: BoxDecoration(
                                   boxShadow: [
                                     BoxShadow(
-                                      color: qualityColor.withOpacity(0.3),
+                                      color: qualityColor.withValues(
+                                        alpha: 0.3,
+                                      ),
                                       blurRadius: 40,
                                       spreadRadius: 5,
                                     ),
@@ -291,10 +364,10 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                                   vertical: 6,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: qualityColor.withOpacity(0.15),
+                                  color: qualityColor.withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
-                                    color: qualityColor.withOpacity(0.3),
+                                    color: qualityColor.withValues(alpha: 0.3),
                                     width: 1.5,
                                   ),
                                 ),
@@ -322,6 +395,8 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                           ),
                         ],
                       ),
+                      const SizedBox(height: 24),
+                      _buildQuickPicks(colors),
                       const SizedBox(height: 32),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -339,7 +414,9 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                             Container(
                               width: 1,
                               height: 40,
-                              color: colors.outlineVariant.withOpacity(0.4),
+                              color: colors.outlineVariant.withValues(
+                                alpha: 0.4,
+                              ),
                             ),
                             Expanded(
                               child: _buildTimePanel(
@@ -363,7 +440,9 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                     vertical: 24,
                   ),
                   decoration: BoxDecoration(
-                    color: colors.surfaceContainerHighest.withOpacity(0.3),
+                    color: colors.surfaceContainerHighest.withValues(
+                      alpha: 0.3,
+                    ),
                     borderRadius: BorderRadius.circular(32),
                   ),
                   child: Column(
@@ -400,7 +479,9 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                                 border: Border.all(
                                   color: isSelected
                                       ? colors.primary
-                                      : colors.outlineVariant.withOpacity(0.5),
+                                      : colors.outlineVariant.withValues(
+                                          alpha: 0.5,
+                                        ),
                                   width: 1.0,
                                 ),
                               ),
@@ -525,8 +606,8 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                   end: Alignment.topCenter,
                   colors: [
                     colors.surface,
-                    colors.surface.withOpacity(0.9),
-                    colors.surface.withOpacity(0.0),
+                    colors.surface.withValues(alpha: 0.9),
+                    colors.surface.withValues(alpha: 0.0),
                   ],
                 ),
               ),
@@ -534,13 +615,19 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                 listener: (context, state) {
                   if (state.status == AlarmStatus.saveSuccess) {
                     context.read<AlarmBloc>().add(LoadAlarmsRequested());
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Đã lưu lịch trình ngủ!')),
+                    showTopNotification(
+                      context,
+                      'Đã lưu lịch trình ngủ!',
+                      icon: Icons.check_circle_outline_rounded,
+                      color: Colors.green,
                     );
                     Navigator.pop(context);
                   } else if (state.status == AlarmStatus.failure) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Lỗi: ${state.errorMessage}')),
+                    showTopNotification(
+                      context,
+                      'Lỗi: ${state.errorMessage}',
+                      icon: Icons.error_outline_rounded,
+                      color: Colors.red,
                     );
                   }
                 },

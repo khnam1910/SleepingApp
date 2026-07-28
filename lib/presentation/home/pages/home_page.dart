@@ -16,6 +16,7 @@ import '../../profile/bloc/profile_event.dart';
 import '../../profile/bloc/profile_state.dart';
 import '../widgets/smooth_chart_widget.dart';
 import 'active_sleep_pages.dart';
+import '../../../core/utils/top_notification_helper.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -143,13 +144,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     AlarmSchedule? nextAlarm,
   ) {
     if (nextAlarm == null) {
-      // Nếu chưa có báo thức, dẫn người dùng sang tab Alarms (index 1 trong MainLayout)
-      // Lưu ý: Ở đây ta có thể dùng DefaultTabController hoặc đơn giản là hiện một gợi ý
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Vui lòng thiết lập lịch trình báo thức trước.'),
-          duration: Duration(seconds: 2),
-        ),
+      showTopNotification(
+        context,
+        'Bạn chưa bật lịch trình báo thức nào. Hãy thiết lập trong tab Báo thức nhé!',
+        icon: Icons.notifications_off_outlined,
       );
       return;
     }
@@ -379,10 +377,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     },
                   ),
 
-                  // Lớp 4: The Moon Core (Lõi trung tâm rực rỡ)
+                  // Lớp 4: The Moon Core (Lõi trung tâm rực rỡ - Phương án 1: Hợp nhất tại tâm)
                   Container(
-                    width: 165,
-                    height: 165,
+                    width: 175,
+                    height: 175,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: RadialGradient(
@@ -395,80 +393,72 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         BoxShadow(
                           color: colors.primary.withOpacity(0.4),
                           blurRadius: 40,
-                          spreadRadius: 10,
+                          spreadRadius: 8,
                         ),
                       ],
                     ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    child: Stack(
+                      alignment: Alignment.center,
                       children: [
-                        Icon(
-                          Icons.nightlight_round,
-                          color: colors.onPrimary.withOpacity(0.9),
-                          size: 28,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          timeStr,
-                          style: TextStyle(
-                            color: colors.onPrimary,
-                            fontSize: 44,
-                            fontWeight: FontWeight.w200,
-                            letterSpacing: -1.5,
+                        // Biểu tượng Mặt trăng (Lớp nền mờ ở chính giữa)
+                        Center(
+                          child: Icon(
+                            Icons.nightlight_round,
+                            color: colors.onPrimary.withOpacity(0.08),
+                            size: 110, // Phóng lớn bao quanh đồng hồ
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        if (nextAlarm != null)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              alarmLabel,
+
+                        // Cụm nội dung chính (Foreground)
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              timeStr,
                               style: TextStyle(
-                                color: colors.onPrimary.withOpacity(0.85),
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.5,
+                                color: colors.onPrimary,
+                                fontSize:
+                                    56, // Tăng size lên một chút cho hoành tráng
+                                fontWeight: FontWeight.w100,
+                                letterSpacing: -2.0,
+                                height: 1.0,
                               ),
                             ),
-                          )
-                        else
-                          AnimatedBuilder(
-                            animation: _breathingController,
-                            builder: (context, child) {
-                              return Opacity(
-                                opacity:
-                                    0.3 + (_breathingController.value * 0.4),
-                                child: child,
-                              );
-                            },
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.notifications_off_outlined,
-                                  size: 12,
-                                  color: colors.onPrimary,
+                            const SizedBox(height: 4),
+                            // Nhãn trạng thái
+                            if (nextAlarm != null)
+                              Text(
+                                alarmLabel.toUpperCase(),
+                                style: TextStyle(
+                                  color: colors.onPrimary.withOpacity(0.7),
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.8,
                                 ),
-                                const SizedBox(width: 4),
-                                Text(
+                              )
+                            else
+                              AnimatedBuilder(
+                                animation: _breathingController,
+                                builder: (context, child) {
+                                  return Opacity(
+                                    opacity:
+                                        0.3 +
+                                        (_breathingController.value * 0.4),
+                                    child: child,
+                                  );
+                                },
+                                child: Text(
                                   'CHƯA ĐẶT BÁO THỨC',
                                   style: TextStyle(
-                                    color: colors.onPrimary,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 0.5,
+                                    color: colors.onPrimary.withOpacity(0.8),
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 1.0,
                                   ),
                                 ),
-                              ],
-                            ),
-                          ),
+                              ),
+                          ],
+                        ),
                       ],
                     ),
                   ),

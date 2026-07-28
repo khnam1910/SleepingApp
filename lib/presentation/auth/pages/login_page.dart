@@ -9,6 +9,7 @@ import '../widgets/custom_label_input.dart';
 import '../widgets/custom_text_field.dart';
 import 'forgot_password.dart';
 import 'register_page.dart';
+import '../../../core/utils/top_notification_helper.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -65,11 +66,11 @@ class _LoginPageState extends State<LoginPage> {
           final errorMsg = state.message.toLowerCase();
 
           if (errorMsg.contains('network') || errorMsg.contains('timeout')) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('Lỗi kết nối mạng. Vui lòng kiểm tra lại!'),
-                backgroundColor: colorScheme.error,
-              ),
+            showTopNotification(
+              context,
+              'Lỗi kết nối mạng. Vui lòng kiểm tra lại!',
+              color: colorScheme.error,
+              icon: Icons.wifi_off_rounded,
             );
           } else {
             setState(() {

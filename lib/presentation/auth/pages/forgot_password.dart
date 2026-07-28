@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import '../../../core/utils/app_validator.dart';
+import '../../../core/utils/top_notification_helper.dart';
 import '../bloc/auth_bloc.dart';
 import '../widgets/custom_label_input.dart';
 import '../widgets/custom_text_field.dart';
@@ -25,8 +27,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   void _onSendCode() {
     if (_formKey.currentState!.validate()) {
       context.read<AuthBloc>().add(
-            AuthForgotPasswordRequested(email: _emailController.text.trim()),
-          );
+        AuthForgotPasswordRequested(email: _emailController.text.trim()),
+      );
     }
   }
 
@@ -38,19 +40,19 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthPasswordResetSent) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Mã khôi phục đã được gửi đến email của bạn.'),
-              backgroundColor: Colors.green,
-            ),
+          showTopNotification(
+            context,
+            'Mã khôi phục đã được gửi đến email của bạn.',
+            color: Colors.green,
+            icon: Icons.mark_email_read_outlined,
           );
           Navigator.pop(context);
         } else if (state is AuthFailure) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: colorScheme.error,
-            ),
+          showTopNotification(
+            context,
+            state.message,
+            color: colorScheme.error,
+            icon: Icons.error_outline_rounded,
           );
         }
       },
@@ -89,8 +91,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                               width: 56,
                               height: 56,
                               decoration: BoxDecoration(
-                                color: colorScheme.primaryContainer
-                                    .withValues(alpha: 0.4),
+                                color: colorScheme.primaryContainer.withValues(
+                                  alpha: 0.4,
+                                ),
                                 borderRadius: BorderRadius.circular(16),
                               ),
                               child: Icon(
@@ -133,8 +136,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                                 borderRadius: BorderRadius.circular(24),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: colorScheme.shadow
-                                        .withValues(alpha: 0.1),
+                                    color: colorScheme.shadow.withValues(
+                                      alpha: 0.1,
+                                    ),
                                     blurRadius: 15,
                                     offset: const Offset(0, 4),
                                   ),
@@ -146,7 +150,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     const CustomLabelInput(
-                                        text: 'Email khôi phục'),
+                                      text: 'Email khôi phục',
+                                    ),
                                     const SizedBox(height: 10),
                                     CustomTextField(
                                       controller: _emailController,
@@ -182,22 +187,28 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                                                     width: 24,
                                                     child:
                                                         CircularProgressIndicator(
-                                                      strokeWidth: 2,
-                                                      color: Colors.white,
-                                                    ),
+                                                          strokeWidth: 2,
+                                                          color: Colors.white,
+                                                        ),
                                                   )
                                                 : const Row(
                                                     mainAxisAlignment:
-                                                        MainAxisAlignment.center,
+                                                        MainAxisAlignment
+                                                            .center,
                                                     children: [
-                                                      Text('Gửi mã xác nhận',
-                                                          style: TextStyle(
-                                                              fontWeight:
-                                                                  FontWeight.bold,
-                                                              fontSize: 16)),
+                                                      Text(
+                                                        'Gửi mã xác nhận',
+                                                        style: TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontSize: 16,
+                                                        ),
+                                                      ),
                                                       SizedBox(width: 8),
-                                                      Icon(Icons.send_rounded,
-                                                          size: 18),
+                                                      Icon(
+                                                        Icons.send_rounded,
+                                                        size: 18,
+                                                      ),
                                                     ],
                                                   ),
                                           );
@@ -217,23 +228,29 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Text('Bạn nhớ mật khẩu? ',
-                                      style: textTheme.bodyMedium
-                                          ?.copyWith(fontSize: 13)),
+                                  Text(
+                                    'Bạn nhớ mật khẩu? ',
+                                    style: textTheme.bodyMedium?.copyWith(
+                                      fontSize: 13,
+                                    ),
+                                  ),
                                   TextButton(
                                     onPressed: () => Navigator.pop(context),
                                     style: TextButton.styleFrom(
                                       visualDensity: VisualDensity.compact,
                                       padding: const EdgeInsets.symmetric(
-                                          horizontal: 4),
+                                        horizontal: 4,
+                                      ),
                                     ),
-                                    child: Text('Quay lại đăng nhập',
-                                        style: textTheme.labelMedium?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                          color: colorScheme.primary,
-                                          fontSize: 13,
-                                          decoration: TextDecoration.underline,
-                                        )),
+                                    child: Text(
+                                      'Quay lại đăng nhập',
+                                      style: textTheme.labelMedium?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: colorScheme.primary,
+                                        fontSize: 13,
+                                        decoration: TextDecoration.underline,
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -252,4 +269,3 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     );
   }
 }
-

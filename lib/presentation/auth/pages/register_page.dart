@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:pinput/pinput.dart';
 import 'package:sleeping_app_flutter/core/utils/app_validator.dart';
+import 'package:sleeping_app_flutter/core/utils/top_notification_helper.dart';
 
 import '../bloc/auth_bloc.dart';
 import '../widgets/custom_label_input.dart';
@@ -77,8 +78,11 @@ class _RegisterPageState extends State<RegisterPage> {
       setState(() {
         _isOtpLoading = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng nhập email hợp lệ')),
+      showTopNotification(
+        context,
+        'Vui lòng nhập email hợp lệ',
+        color: Theme.of(context).colorScheme.error,
+        icon: Icons.error_outline_rounded,
       );
     }
   }
@@ -109,19 +113,23 @@ class _RegisterPageState extends State<RegisterPage> {
             ),
           );
         } else if (state is AuthOtpVerifiedFailure) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message)),
+          showTopNotification(
+            context,
+            state.message,
+            color: colorScheme.error,
+            icon: Icons.error_outline_rounded,
           );
         } else if (state is AuthOtpSentSuccess) {
           _startTimer();
           setState(() {
             _isOtpLoading = false;
-            _isOtpSent = true; // Thêm dòng này để dấu tích hiện ra
+            _isOtpSent = true;
           });
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Đã gửi mã OTP! Vui lòng kiểm tra email.'),
-            ),
+          showTopNotification(
+            context,
+            'Đã gửi mã OTP! Vui lòng kiểm tra email.',
+            color: Colors.green,
+            icon: Icons.mark_email_read_outlined,
           );
         } else if (state is AuthOtpSentFailure) {
           setState(() {

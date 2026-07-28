@@ -1,14 +1,14 @@
-# Tasks: Redesign Hero Section - Radiant Breathing Moon
+# Tasks: Refactor Alarm Flow & UI Cleanup
 
-- [ ] **Bước 1: Cấu trúc Animation mới**
-    - [ ] Thêm `_breathingController` và khởi tạo trong `initState`.
-    - [ ] Cập nhật logic `dispose` để giải phóng cả 2 controller.
-- [ ] **Bước 2: Tái thiết kế Hero Widget**
-    - [ ] Xây dựng các lớp hào quang (Pulse Layers) sử dụng `AnimatedBuilder`.
-    - [ ] Triển khai vòng xoay kép (Double Orbit) tạo chiều sâu.
-    - [ ] Tinh chỉnh typography cho đồng hồ trung tâm (Font weight, Letter spacing).
-- [ ] **Bước 3: Tinh chỉnh thẩm mỹ**
-    - [ ] Điều chỉnh độ mờ (Opacity) và màu sắc cho hài hòa với chế độ Dark Mode.
-    - [ ] Thêm hiệu ứng kính mờ (Glassmorphism) nhẹ cho phần nhãn báo thức.
-- [ ] **Bước 4: Kiểm tra & Hoàn thiện**
-    - [ ] Đảm bảo hiệu ứng chạy mượt mà trên thiết bị.
+- [ ] **Step 1: Cleanup AlarmsPage**
+    - [ ] Remove calculation toggle and list.
+    - [ ] Clean up unused imports and state usage.
+- [ ] **Step 2: Enhance SetAlarmPage**
+    - [ ] Implement `_buildQuickPicks` widget.
+    - [ ] Add logic to update `_bedTime` automatically when a quick pick is tapped.
+    - [ ] Ensure the sleep tracker wheel updates visually.
+- [ ] **Step 3: Bloc & Logic Cleanup**
+    - [ ] Remove unused events/states related to calculation if they are no longer needed globally.
+- [ ] **Step 4: Verification**
+    - [ ] Verify clean layout in AlarmsPage.
+    - [ ] Verify smart presets in SetAlarmPage.
