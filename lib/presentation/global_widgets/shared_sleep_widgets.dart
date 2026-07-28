@@ -84,21 +84,7 @@ class SleepCycleCard extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(20),
-
-      // decoration: BoxDecoration(
-      //   color: isHighlighted
-      //       ? colors.primaryContainer.withOpacity(0.4)
-      //       : colors.surfaceContainerHighest.withOpacity(0.3),
-      //   borderRadius: BorderRadius.circular(24),
-      //   border: Border.all(
-      //     color: isHighlighted
-      //         ? colors.primary.withOpacity(0.3)
-      //         : Colors.transparent,
-      //     width: 1.5,
-      //   ),
-      // ),
       decoration: BoxDecoration(
-        // Xử lý nền: Tối ưu màu mờ cho Dark Mode
         color: isHighlighted
             ? (isDark
                   ? colors.primary.withOpacity(0.15)
@@ -106,22 +92,13 @@ class SleepCycleCard extends StatelessWidget {
             : (isDark
                   ? colors.surfaceContainerHighest.withOpacity(0.2)
                   : colors.surface),
-
         borderRadius: BorderRadius.circular(24),
-
-        // Xử lý viền: Bo viền màu nổi nếu được Highlight
         border: Border.all(
           color: isHighlighted
-              ? colors.primary.withOpacity(
-                  isDark ? 0.8 : 1.0,
-                ) // Viền rực sáng trong đêm
-              : colors.outlineVariant.withOpacity(
-                  0.2,
-                ), // Viền mờ cho thẻ thường
-          width: isHighlighted ? 2.0 : 1.0, // Thẻ Highlight có viền dày gấp đôi
+              ? colors.primary.withOpacity(isDark ? 0.8 : 1.0)
+              : colors.outlineVariant.withOpacity(0.2),
+          width: isHighlighted ? 2.0 : 1.0,
         ),
-
-        // Xử lý Glow Shadow: Tạo hiệu ứng "toả hào quang" trong Dark Mode
         boxShadow: isHighlighted
             ? [
                 BoxShadow(
@@ -131,7 +108,7 @@ class SleepCycleCard extends StatelessWidget {
                   offset: const Offset(0, 4),
                 ),
               ]
-            : [], // Thẻ thường không có bóng
+            : [],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -171,7 +148,6 @@ class SleepCycleCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              // Hiển thị cục Pin thay cho chữ
               _buildBatteryIcon(batteryBars, batteryColor),
               const SizedBox(height: 24),
               Text(
@@ -541,6 +517,10 @@ class SavedAlarmCard extends StatelessWidget {
   final bool isActive;
   final ValueChanged<bool> onToggle;
   final ColorScheme colors;
+  final bool isSelectionMode;
+  final bool isSelected;
+  final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
 
   const SavedAlarmCard({
     super.key,
@@ -552,110 +532,135 @@ class SavedAlarmCard extends StatelessWidget {
     required this.isActive,
     required this.onToggle,
     required this.colors,
+    this.isSelectionMode = false,
+    this.isSelected = false,
+    this.onTap,
+    this.onLongPress,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 12),
-      // 💡 TĂNG PADDING DỌC (từ 14 lên 20) ĐỂ THẺ "DỄ THỞ" HƠN
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-      decoration: BoxDecoration(
-        color: isActive
-            ? colors.primaryContainer.withOpacity(0.8)
-            : colors.surfaceContainerHighest.withOpacity(0.3),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Row(
-        crossAxisAlignment:
-            CrossAxisAlignment.start, // Căn mọi thứ lên sát trần
-        children: [
-          // --- CỘT TRÁI ---
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 💡 ĐƯA TIÊU ĐỀ LÊN TRÊN ĐỂ KHÔNG BỊ CHÈN ÉP CHỮ
-                Text(
-                  title.toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.5,
-                    color: isActive ? colors.primary : colors.outline,
-                  ),
-                ),
-                const SizedBox(height: 6),
-
-                // Giờ thức dậy lấy lại phong độ (To, mỏng, thanh lịch)
-                Text(
-                  wakeTime,
-                  style: TextStyle(
-                    fontSize: 42,
-                    fontWeight: FontWeight.w300,
-                    color: isActive
-                        ? colors.onPrimaryContainer
-                        : colors.onSurface,
-                    letterSpacing: -1.0,
-                    height: 1.0,
-                  ),
-                ),
-                const SizedBox(height: 10),
-
-                Text(
-                  days,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: isActive
-                        ? colors.onPrimaryContainer.withOpacity(0.7)
-                        : colors.outline,
-                  ),
-                ),
-              ],
-            ),
+    return InkWell(
+      onTap: onTap,
+      onLongPress: onLongPress,
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? colors.primary.withOpacity(0.2)
+              : isActive
+              ? colors.primaryContainer.withOpacity(0.8)
+              : colors.surfaceContainerHighest.withOpacity(0.3),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: isSelected ? colors.primary : Colors.transparent,
+            width: 2.0,
           ),
-
-          // --- CỘT PHẢI ---
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Transform.scale(
-                scale: 0.85, // Nhả scale ra một chút cho nút bớt cụt lủn
-                alignment: Alignment.centerRight,
-                child: Switch(
-                  value: isActive,
-                  onChanged: onToggle,
-                  activeColor: colors.primary,
-                ),
-              ),
-
-              // 💡 Đẩy dòng thông tin giờ ngủ xuống dưới cùng cho cân đối với cột trái
-              const SizedBox(height: 24),
-
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.bedtime_rounded,
-                    size: 14,
-                    color: isActive ? colors.primary : colors.outline,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (isSelectionMode) ...[
+              Container(
+                margin: const EdgeInsets.only(right: 16, top: 12),
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isSelected ? colors.primary : Colors.transparent,
+                  border: Border.all(
+                    color: isSelected ? colors.primary : colors.outline,
+                    width: 2,
                   ),
-                  const SizedBox(width: 4),
+                ),
+                child: isSelected
+                    ? Icon(Icons.check, size: 16, color: colors.onPrimary)
+                    : null,
+              ),
+            ],
+            // --- CỘT TRÁI ---
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    '$bedTime • $duration',
+                    title.toUpperCase(),
                     style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
                       color: isActive ? colors.primary : colors.outline,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    wakeTime,
+                    style: TextStyle(
+                      fontSize: 42,
+                      fontWeight: FontWeight.w300,
+                      color: isActive
+                          ? colors.onPrimaryContainer
+                          : colors.onSurface,
+                      letterSpacing: -1.0,
+                      height: 1.0,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    days,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: isActive
+                          ? colors.onPrimaryContainer.withOpacity(0.7)
+                          : colors.outline,
                     ),
                   ),
                 ],
               ),
-            ],
-          ),
-        ],
+            ),
+
+            // --- CỘT PHẢI ---
+            if (!isSelectionMode)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Transform.scale(
+                    scale: 0.85,
+                    alignment: Alignment.centerRight,
+                    child: Switch(
+                      value: isActive,
+                      onChanged: onToggle,
+                      activeColor: colors.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.bedtime_rounded,
+                        size: 14,
+                        color: isActive ? colors.primary : colors.outline,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$bedTime • $duration',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: isActive ? colors.primary : colors.outline,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+          ],
+        ),
       ),
     );
   }

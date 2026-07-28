@@ -5,10 +5,6 @@ import '../entities/wake_up_quality.dart';
 
 class SleepMathUtils {
   /// Phân tích chất lượng thức dậy dựa trên tổng số phút ngủ
-  /// Quy tắc: Chu kỳ 90 phút
-  /// - 0-20p hoặc 80-90p: Optimal (Ngủ nông)
-  /// - 20-50p: Deep Sleep Risk (SWS)
-  /// - 50-80p: REM Risk (REM)
   static WakeUpQuality getWakeUpQuality(int sleepMinutes) {
     final int remainder = sleepMinutes % 90;
 
@@ -73,7 +69,6 @@ class SleepMathUtils {
     for (var existing in existingAlarms) {
       if (!existing.isEnabled || existing.id == newAlarm.id) continue;
 
-      // Kiểm tra xem có chung ngày lặp lại không
       bool hasCommonDay = newAlarm.repeatDays.any(
         (day) => existing.repeatDays.contains(day),
       );
@@ -84,7 +79,6 @@ class SleepMathUtils {
       final exStart = _timeToMinutes(existing.bedTime);
       final exEnd = _timeToMinutes(existing.wakeUpTime);
 
-      // Trường hợp trùng khít
       if (newStart == exStart && newEnd == exEnd) {
         return SleepConflict(
           type: SleepConflictType.identical,
@@ -94,7 +88,6 @@ class SleepMathUtils {
         );
       }
 
-      // TH2: Bao hàm (Nested)
       if (_isNested(newStart, newEnd, exStart, exEnd)) {
         return SleepConflict(
           type: SleepConflictType.nested,
@@ -104,7 +97,6 @@ class SleepMathUtils {
         );
       }
 
-      // TH1: So le (Overlap)
       if (_isOverlapping(newStart, newEnd, exStart, exEnd)) {
         return SleepConflict(
           type: SleepConflictType.overlap,
@@ -141,69 +133,48 @@ class SleepMathUtils {
 
   static bool _isPointInInterval(int point, int start, int length) {
     int diff = (point - start + 1440) % 1440;
-    // Điểm nằm trong khoảng nếu khoảng cách từ điểm tới start <= độ dài khoảng
     return diff <= length;
   }
 
-  /// Tìm báo thức có mốc thức dậy sớm nhất để đặt chuông hệ thống
-  static AlarmSchedule? getEarliestWakeUp(List<AlarmSchedule> alarms) {
+  /// Tìm báo thức sẽ reo sớm nhất kể từ bây giờ
+  static AlarmSchedule? getNextActiveAlarm(List<AlarmSchedule> alarms) {
     if (alarms.isEmpty) return null;
 
-    AlarmSchedule? earliest;
-    int minMinutes = 1441;
+    final now = DateTime.now();
+    AlarmSchedule? next;
+    DateTime? minDateTime;
 
     for (var alarm in alarms) {
       if (!alarm.isEnabled) continue;
-      int totalMinutes = _timeToMinutes(alarm.wakeUpTime);
-      if (totalMinutes < minMinutes) {
-        minMinutes = totalMinutes;
-        earliest = alarm;
+      final ringTime = alarm.getNextRingTime(now);
+      if (ringTime == null) continue;
+
+      if (minDateTime == null || ringTime.isBefore(minDateTime)) {
+        minDateTime = ringTime;
+        next = alarm;
       }
     }
-    return earliest;
+    return next;
   }
 
-  /// Tìm lịch trình tối ưu nhất (Gần mốc 6 chu kỳ nhất)
-  static AlarmSchedule? getOptimalSchedule(List<AlarmSchedule> alarms) {
-    if (alarms.isEmpty) return null;
+  /// Kiểm tra xung đột phiên ngủ (Trùng đầu HOẶC trùng đuôi VÀ chung ngày)
+  static bool isSameSessionConflict(AlarmSchedule a, AlarmSchedule b) {
+    // Trùng giờ thức HOẶC trùng giờ ngủ
+    bool sameStartOrEnd =
+        a.wakeUpTime == b.wakeUpTime || a.bedTime == b.bedTime;
+    if (!sameStartOrEnd) return false;
 
-    AlarmSchedule? optimal;
-    double bestDiff = 999;
+    // CHUNG ngày lặp lại
+    return a.repeatDays.any((day) => b.repeatDays.contains(day));
+  }
 
-    for (var alarm in alarms) {
-      if (!alarm.isEnabled) continue;
-
-      int mins = getDifferenceMinutes(
-        int.parse(alarm.bedTime.split(':')[0]),
-        int.parse(alarm.bedTime.split(':')[1]),
-        int.parse(alarm.wakeUpTime.split(':')[0]),
-        int.parse(alarm.wakeUpTime.split(':')[1]),
-      );
-
-      double cycles = mins / 90;
-      double diff = (cycles - 6).abs();
-
-      if (diff < bestDiff) {
-        bestDiff = diff;
-        optimal = alarm;
-      }
-    }
-    return optimal;
+  /// So sánh xem timeA có muộn hơn timeB không (Dạng HH:mm)
+  static bool isLaterTime(String timeA, String timeB) {
+    return _timeToMinutes(timeA) > _timeToMinutes(timeB);
   }
 
   static int _timeToMinutes(String timeStr) {
     final parts = timeStr.split(':');
     return int.parse(parts[0]) * 60 + int.parse(parts[1]);
-  }
-
-  /// Kiểm tra xem 2 báo thức có cùng giờ thức dậy và chung ngày lặp lại không
-  static bool hasSameScheduleConfig(AlarmSchedule a, AlarmSchedule b) {
-    if (a.wakeUpTime != b.wakeUpTime) return false;
-    return a.repeatDays.any((day) => b.repeatDays.contains(day));
-  }
-
-  /// So sánh xem timeA có muộn hơn timeB không (Dạng HH:mm)
-  static bool isLaterBedTime(String timeA, String timeB) {
-    return _timeToMinutes(timeA) > _timeToMinutes(timeB);
   }
 }

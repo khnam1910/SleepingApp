@@ -19,7 +19,9 @@ class AlarmState extends Equatable {
   final List<SleepCycle> calculatedCycles;
   final TimeOfDay? targetTime;
   final int toggleIndex;
-  final int selectedCycleCount; // New property
+  final int selectedCycleCount;
+  final bool isSelectionMode;
+  final Set<String> selectedAlarmIds;
   final AlarmStatus status;
   final String? errorMessage;
 
@@ -28,7 +30,9 @@ class AlarmState extends Equatable {
     this.calculatedCycles = const [],
     this.targetTime,
     this.toggleIndex = 0,
-    this.selectedCycleCount = 6, // Default to 6 (Optimal)
+    this.selectedCycleCount = 6,
+    this.isSelectionMode = false,
+    this.selectedAlarmIds = const {},
     this.status = AlarmStatus.initial,
     this.errorMessage,
   });
@@ -39,6 +43,8 @@ class AlarmState extends Equatable {
     TimeOfDay? targetTime,
     int? toggleIndex,
     int? selectedCycleCount,
+    bool? isSelectionMode,
+    Set<String>? selectedAlarmIds,
     AlarmStatus? status,
     String? errorMessage,
   }) {
@@ -48,6 +54,8 @@ class AlarmState extends Equatable {
       targetTime: targetTime ?? this.targetTime,
       toggleIndex: toggleIndex ?? this.toggleIndex,
       selectedCycleCount: selectedCycleCount ?? this.selectedCycleCount,
+      isSelectionMode: isSelectionMode ?? this.isSelectionMode,
+      selectedAlarmIds: selectedAlarmIds ?? this.selectedAlarmIds,
       status: status ?? this.status,
       errorMessage: errorMessage ?? this.errorMessage,
     );
@@ -60,6 +68,8 @@ class AlarmState extends Equatable {
     targetTime,
     toggleIndex,
     selectedCycleCount,
+    isSelectionMode,
+    selectedAlarmIds,
     status,
     errorMessage,
   ];

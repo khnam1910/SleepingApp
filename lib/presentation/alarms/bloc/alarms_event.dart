@@ -34,3 +34,22 @@ class SelectCycleRequested extends AlarmEvent {
 
   SelectCycleRequested(this.selectedCycles);
 }
+
+class ToggleSelectionModeRequested extends AlarmEvent {
+  final String? initialAlarmId;
+  ToggleSelectionModeRequested({this.initialAlarmId});
+}
+
+class ToggleAlarmSelection extends AlarmEvent {
+  final String alarmId;
+  ToggleAlarmSelection(this.alarmId);
+}
+
+class ClearSelectionRequested extends AlarmEvent {}
+
+class DeleteSelectedAlarmsRequested extends AlarmEvent {}
+
+class DeleteSingleAlarmRequested extends AlarmEvent {
+  final String alarmId;
+  DeleteSingleAlarmRequested(this.alarmId);
+}

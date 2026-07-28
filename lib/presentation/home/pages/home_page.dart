@@ -1,15 +1,21 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sleeping_app_flutter/presentation/home/widgets/shared_app_bar.dart';
 
+import '../../../domain/entities/alarm_schedules_entity.dart';
+import '../../../domain/utils/sleep_math_utils.dart';
+import '../../alarms/bloc/alarms_bloc.dart';
+import '../../alarms/bloc/alarms_state.dart';
+import '../../alarms/extensions/duration_extension.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../profile/bloc/profile_bloc.dart';
 import '../../profile/bloc/profile_event.dart';
 import '../../profile/bloc/profile_state.dart';
-import '../widgets/sleep_cycle_bottom_sheet.dart';
 import '../widgets/smooth_chart_widget.dart';
+import 'active_sleep_pages.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -18,19 +24,42 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage>
-    with SingleTickerProviderStateMixin {
-  // ĐÃ XÓA BIẾN _selectedIndex Ở ĐÂY[cite: 1]
-
+class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   late AnimationController _rotateController;
+  late AnimationController _breathingController;
+  late Animation<double> _pulseAnimation;
+  late DateTime _currentTime;
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
+    _currentTime = DateTime.now();
+
+    // 1. Controller xoay (Orbit) - Xoay chậm rãi huyền bí
     _rotateController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 10),
+      duration: const Duration(seconds: 30),
     )..repeat();
+
+    // 2. Controller hơi thở (Breathing/Pulse) - Co giãn mượt mà
+    _breathingController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    )..repeat(reverse: true);
+
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.12).animate(
+      CurvedAnimation(parent: _breathingController, curve: Curves.easeInOut),
+    );
+
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          _currentTime = DateTime.now();
+        });
+      }
+    });
+
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
       context.read<ProfileBloc>().add(
@@ -41,7 +70,9 @@ class _HomePageState extends State<HomePage>
 
   @override
   void dispose() {
+    _timer?.cancel();
     _rotateController.dispose();
+    _breathingController.dispose();
     super.dispose();
   }
 
@@ -54,80 +85,135 @@ class _HomePageState extends State<HomePage>
       extendBodyBehindAppBar: true,
       backgroundColor: colors.surface,
       appBar: const SharedAppBar(),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.only(
-          top: MediaQuery.of(context).padding.top + kToolbarHeight + 10,
-          left: 24,
-          right: 24,
+      body: BlocBuilder<AlarmBloc, AlarmState>(
+        builder: (context, alarmState) {
+          final nextAlarm = SleepMathUtils.getNextActiveAlarm(
+            alarmState.alarms,
+          );
+          final now = TimeOfDay.now();
+
+          // Tính toán thời lượng ngủ nếu đi ngủ ngay bây giờ
+          int? sleepMins;
+          if (nextAlarm != null) {
+            final wakeParts = nextAlarm.wakeUpTime.split(':');
+            sleepMins = SleepMathUtils.getDifferenceMinutes(
+              now.hour,
+              now.minute,
+              int.parse(wakeParts[0]),
+              int.parse(wakeParts[1]),
+            );
+          }
+
+          return SingleChildScrollView(
+            padding: EdgeInsets.only(
+              top: MediaQuery.of(context).padding.top + 20,
+              left: 24,
+              right: 24,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildGreeting(colors),
+                const SizedBox(height: 20),
+                _buildDailyInsight(colors),
+                const SizedBox(height: 30),
+                _buildStartSleepHero(colors, nextAlarm, sleepMins),
+                const SizedBox(height: 40),
+                _buildSectionTitle("LAST NIGHT'S SLEEP", colors),
+                const SizedBox(height: 16),
+                _buildQuickStats(colors, sleepMins),
+                const SizedBox(height: 16),
+                _buildStreakCard(colors),
+                const SizedBox(height: 16),
+                _buildSleepChart(colors),
+                const SizedBox(height: 16),
+                _buildBottomStatsRow(colors, nextAlarm),
+                const SizedBox(height: 120),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showSleepConfirmation(
+    BuildContext context,
+    ColorScheme colors,
+    AlarmSchedule? nextAlarm,
+  ) {
+    if (nextAlarm == null) {
+      // Nếu chưa có báo thức, dẫn người dùng sang tab Alarms (index 1 trong MainLayout)
+      // Lưu ý: Ở đây ta có thể dùng DefaultTabController hoặc đơn giản là hiện một gợi ý
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vui lòng thiết lập lịch trình báo thức trước.'),
+          duration: Duration(seconds: 2),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildGreeting(colors),
-            const SizedBox(height: 30),
-            _buildStartSleepHero(colors),
-            const SizedBox(height: 40),
-            _buildSectionTitle("LAST NIGHT'S SLEEP", colors),
-            const SizedBox(height: 16),
-            _buildQuickStats(colors),
-            const SizedBox(height: 16),
-            _buildStreakCard(colors),
-            const SizedBox(height: 16),
-            _buildSleepChart(colors),
-            const SizedBox(height: 16),
-            _buildBottomStatsRow(colors),
-            // Chừa một khoảng trống lớn (120) ở cuối để không bị Bottom Nav che mất[cite: 1]
-            const SizedBox(height: 120),
-          ],
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ActiveSleepScreen(
+          wakeUpTime: nextAlarm.wakeUpTime,
         ),
       ),
-      // ĐÃ XÓA THUỘC TÍNH bottomNavigationBar Ở ĐÂY[cite: 1]
     );
   }
-
-  void _showSleepConfirmation(BuildContext context, ColorScheme colors) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (BuildContext context) {
-        return SleepCycleBottomSheet(colors: colors);
-      },
-    );
-  }
-
-  // --- CÁC COMPONENT GIAO DIỆN ---
 
   Widget _buildGreeting(ColorScheme colors) {
-    // 💡 ĐỔI SANG LẮNG NGHE PROFILEBLOC
     return BlocBuilder<ProfileBloc, ProfileState>(
       builder: (context, state) {
-        String subtitleText = 'Đang tải thông tin...';
-
+        String name = 'Người dùng';
         if (state is ProfileLoaded) {
-          // Lấy displayName ra, nếu bị null (chưa có tên) thì gọi là "Người dùng"
-          final name = state.user.displayName ?? 'Người dùng';
-          subtitleText = name;
+          name = state.user.displayName ?? 'Người dùng';
+        }
+
+        final now = DateTime.now();
+        const weekdays = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+        final dateStr =
+            '${weekdays[now.weekday % 7]}, ${now.day} thg ${now.month}';
+
+        final hour = now.hour;
+        String greeting = 'Chào buổi sáng';
+        if (hour >= 12 && hour < 18) {
+          greeting = 'Chào buổi chiều';
+        } else if (hour >= 18 || hour < 5) {
+          greeting = 'Chào buổi tối';
         }
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Chào buổi sáng!',
+              dateStr.toUpperCase(),
               style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: colors.onSurface,
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: colors.primary.withOpacity(0.8),
+                letterSpacing: 1.2,
               ),
             ),
             const SizedBox(height: 6),
             Text(
-              subtitleText,
+              '$greeting!',
               style: TextStyle(
-                fontSize: 15,
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: colors.onSurface,
+                height: 1.1,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              name,
+              style: TextStyle(
+                fontSize: 16,
                 color: colors.onSurfaceVariant,
-                fontWeight: FontWeight.w500, // Thêm độ đậm một chút cho tên
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],
@@ -136,63 +222,134 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  Widget _buildStartSleepHero(ColorScheme colors) {
+  Widget _buildDailyInsight(ColorScheme colors) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            colors.primaryContainer.withOpacity(0.3),
+            colors.surface,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: colors.primary.withOpacity(0.1)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: colors.primary.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.lightbulb_outline_rounded,
+              color: colors.primary,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'SLEEP TIP',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: colors.primary,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Duy trì nhiệt độ phòng mát mẻ giúp bạn chìm vào giấc ngủ sâu nhanh hơn.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: colors.onSurfaceVariant,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStartSleepHero(
+    ColorScheme colors,
+    AlarmSchedule? nextAlarm,
+    int? sleepMins,
+  ) {
+    final String timeStr =
+        '${_currentTime.hour.toString().padLeft(2, '0')}:${_currentTime.minute.toString().padLeft(2, '0')}';
+    final String alarmLabel = nextAlarm != null
+        ? 'Báo thức: ${nextAlarm.wakeUpTime}'
+        : 'Chưa đặt báo thức';
+
     return Column(
       children: [
         Center(
           child: GestureDetector(
-            onTap: () {
-              _showSleepConfirmation(context, colors);
-            },
+            onTap: () => _showSleepConfirmation(context, colors, nextAlarm),
             child: SizedBox(
-              width: 200,
-              height: 200,
+              width: 280,
+              height: 280,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
+                  // Lớp 1: Deep Pulse Aura (Hào quang co giãn chậm)
+                  AnimatedBuilder(
+                    animation: _pulseAnimation,
+                    builder: (context, child) {
+                      return Container(
+                        width: 260 * _pulseAnimation.value,
+                        height: 260 * _pulseAnimation.value,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: colors.primary.withOpacity(0.05),
+                        ),
+                      );
+                    },
+                  ),
+
+                  // Lớp 2: Outer Rotating Ring (Vòng xoay mảnh bên ngoài)
                   AnimatedBuilder(
                     animation: _rotateController,
                     builder: (context, child) {
                       return Transform.rotate(
                         angle: _rotateController.value * 2 * math.pi,
                         child: Container(
-                          width: 190,
-                          height: 190,
+                          width: 220,
+                          height: 220,
                           decoration: BoxDecoration(
-                            color: colors.primary.withOpacity(0.35),
-                            borderRadius: const BorderRadius.only(
-                              topLeft: Radius.circular(80),
-                              topRight: Radius.circular(80),
-                              bottomLeft: Radius.circular(60),
-                              bottomRight: Radius.circular(100),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: colors.primary.withOpacity(0.2),
+                              width: 1,
+                              style: BorderStyle.solid,
                             ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
-
-                  AnimatedBuilder(
-                    animation: _rotateController,
-                    builder: (context, child) {
-                      return Transform.rotate(
-                        angle: -_rotateController.value * 2 * math.pi,
-                        child: Container(
-                          width: 175,
-                          height: 175,
-                          decoration: BoxDecoration(
-                            color: colors.primary,
-                            borderRadius: const BorderRadius.only(
-                              topLeft: Radius.circular(80),
-                              topRight: Radius.circular(80),
-                              bottomLeft: Radius.circular(60),
-                              bottomRight: Radius.circular(100),
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: colors.primary.withOpacity(0.5),
-                                blurRadius: 20,
-                                offset: const Offset(0, 5),
+                          child: Stack(
+                            children: [
+                              Positioned(
+                                top: 20,
+                                left: 20,
+                                child: Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: colors.primary.withOpacity(0.5),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
@@ -201,49 +358,155 @@ class _HomePageState extends State<HomePage>
                     },
                   ),
 
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.nightlight_round,
-                        color: colors.onPrimary,
-                        size: 32,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Start Sleep',
-                        style: TextStyle(
-                          color: colors.onPrimary,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                  // Lớp 3: Inner Counter-Rotating Ring (Vòng xoay ngược chiều)
+                  AnimatedBuilder(
+                    animation: _rotateController,
+                    builder: (context, child) {
+                      return Transform.rotate(
+                        angle: -_rotateController.value * 4 * math.pi,
+                        child: Container(
+                          width: 190,
+                          height: 190,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: colors.primary.withOpacity(0.1),
+                              width: 1,
+                            ),
+                          ),
                         ),
+                      );
+                    },
+                  ),
+
+                  // Lớp 4: The Moon Core (Lõi trung tâm rực rỡ)
+                  Container(
+                    width: 165,
+                    height: 165,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          colors.primary,
+                          colors.primary.withOpacity(0.8),
+                        ],
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'TAP TO DRIFT AWAY',
-                        style: TextStyle(
-                          color: colors.onPrimary.withOpacity(0.8),
-                          fontSize: 9,
-                          letterSpacing: 1.5,
-                          fontWeight: FontWeight.w600,
+                      boxShadow: [
+                        BoxShadow(
+                          color: colors.primary.withOpacity(0.4),
+                          blurRadius: 40,
+                          spreadRadius: 10,
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.nightlight_round,
+                          color: colors.onPrimary.withOpacity(0.9),
+                          size: 28,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          timeStr,
+                          style: TextStyle(
+                            color: colors.onPrimary,
+                            fontSize: 44,
+                            fontWeight: FontWeight.w200,
+                            letterSpacing: -1.5,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        if (nextAlarm != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              alarmLabel,
+                              style: TextStyle(
+                                color: colors.onPrimary.withOpacity(0.85),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          )
+                        else
+                          AnimatedBuilder(
+                            animation: _breathingController,
+                            builder: (context, child) {
+                              return Opacity(
+                                opacity:
+                                    0.3 + (_breathingController.value * 0.4),
+                                child: child,
+                              );
+                            },
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.notifications_off_outlined,
+                                  size: 12,
+                                  color: colors.onPrimary,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'CHƯA ĐẶT BÁO THỨC',
+                                  style: TextStyle(
+                                    color: colors.onPrimary,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
           ),
         ),
-        const SizedBox(height: 24),
-        Text(
-          '"Rest is the cornerstone of growth."',
-          style: TextStyle(
-            color: colors.outline,
-            fontStyle: FontStyle.italic,
-            fontSize: 14,
+        const SizedBox(height: 32),
+        if (nextAlarm != null)
+          AnimatedBuilder(
+            animation: _breathingController,
+            builder: (context, child) {
+              return Opacity(
+                opacity: 0.4 + (_breathingController.value * 0.6),
+                child: child,
+              );
+            },
+            child: Text(
+              '${sleepMins?.formatAsDuration() ?? ''} ngủ nếu bắt đầu ngay',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: colors.primary,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+          )
+        else
+          Text(
+            '"Giấc ngủ là nền tảng của sự phát triển."',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: colors.outline,
+              fontStyle: FontStyle.italic,
+              fontSize: 14,
+            ),
           ),
-        ),
       ],
     );
   }
@@ -260,20 +523,30 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  Widget _buildQuickStats(ColorScheme colors) {
+  Widget _buildQuickStats(ColorScheme colors, int? sleepMins) {
+    String duration = sleepMins != null ? sleepMins.formatAsDuration() : '--';
+    String score = sleepMins != null
+        ? "${(sleepMins / 5.4).clamp(0, 100).toInt()}/100"
+        : '--';
+
     return Row(
       children: [
         Expanded(
           child: _buildStatBox(
             Icons.nightlight_outlined,
-            'Duration',
-            '7h 20m',
+            'Thời lượng dự kiến',
+            duration,
             colors,
           ),
         ),
         const SizedBox(width: 16),
         Expanded(
-          child: _buildStatBox(Icons.auto_awesome, 'Score', '85/100', colors),
+          child: _buildStatBox(
+            Icons.auto_awesome,
+            'Điểm dự báo',
+            score,
+            colors,
+          ),
         ),
       ],
     );
@@ -307,12 +580,16 @@ class _HomePageState extends State<HomePage>
             children: [
               Icon(icon, size: 20, color: colors.primary),
               const SizedBox(width: 8),
-              Text(
-                title,
-                style: TextStyle(
-                  color: colors.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    color: colors.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
               ),
             ],
@@ -321,7 +598,7 @@ class _HomePageState extends State<HomePage>
           Text(
             value,
             style: TextStyle(
-              fontSize: 24,
+              fontSize: 22,
               fontWeight: FontWeight.bold,
               color: colors.onSurface,
             ),
@@ -362,7 +639,7 @@ class _HomePageState extends State<HomePage>
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '7 Day Streak',
+                      'Chuỗi 7 ngày',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -379,7 +656,7 @@ class _HomePageState extends State<HomePage>
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        'LEVEL 2',
+                        'CẤP 2',
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
@@ -392,7 +669,7 @@ class _HomePageState extends State<HomePage>
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  "You're on a roll! Keep it up for a healthier cycle.",
+                  "Bạn đang làm rất tốt! Hãy tiếp tục duy trì nhé.",
                   style: TextStyle(
                     color: colors.onSecondaryContainer.withOpacity(0.8),
                     fontSize: 13,
@@ -433,7 +710,7 @@ class _HomePageState extends State<HomePage>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Sleep Stages',
+                    'Giai đoạn giấc ngủ',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -442,7 +719,7 @@ class _HomePageState extends State<HomePage>
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Good Quality',
+                    'Chất lượng tốt',
                     style: TextStyle(
                       color: colors.onSurfaceVariant,
                       fontSize: 14,
@@ -460,7 +737,7 @@ class _HomePageState extends State<HomePage>
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
-                  '+5% VS AVG',
+                  '+5% VS TB',
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
@@ -484,7 +761,7 @@ class _HomePageState extends State<HomePage>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '10pm',
+                '10 CH',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -492,7 +769,7 @@ class _HomePageState extends State<HomePage>
                 ),
               ),
               Text(
-                '2am',
+                '2 SA',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -500,7 +777,7 @@ class _HomePageState extends State<HomePage>
                 ),
               ),
               Text(
-                '6am',
+                '6 SA',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -514,7 +791,9 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  Widget _buildBottomStatsRow(ColorScheme colors) {
+  Widget _buildBottomStatsRow(ColorScheme colors, AlarmSchedule? nextAlarm) {
+    String alarmTime = nextAlarm != null ? nextAlarm.wakeUpTime : '--:--';
+
     return Row(
       children: [
         Expanded(
@@ -537,11 +816,11 @@ class _HomePageState extends State<HomePage>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Morning Mood',
+                  'Tâm trạng sáng',
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     color: colors.onSurfaceVariant,
-                    fontSize: 14,
+                    fontSize: 13,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -551,11 +830,11 @@ class _HomePageState extends State<HomePage>
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Refreshed',
+                        'Sảng khoái',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: colors.onSurface,
-                          fontSize: 15,
+                          fontSize: 14,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -587,11 +866,11 @@ class _HomePageState extends State<HomePage>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Next Alarm',
+                  'Báo thức tới',
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     color: colors.onSurfaceVariant,
-                    fontSize: 14,
+                    fontSize: 13,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -601,7 +880,7 @@ class _HomePageState extends State<HomePage>
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        '06:30 AM',
+                        alarmTime,
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: colors.onSurface,

@@ -46,6 +46,7 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
       isSmartWake: widget.existingAlarm?.isSmartWake ?? false,
       smartWakeWindow: widget.existingAlarm?.smartWakeWindow ?? 30,
       isEnabled: widget.existingAlarm?.isEnabled ?? true,
+      createdAt: widget.existingAlarm?.createdAt ?? DateTime.now(),
     );
 
     final alarmBloc = context.read<AlarmBloc>();

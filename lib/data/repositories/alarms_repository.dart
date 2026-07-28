@@ -112,4 +112,31 @@ class AlarmRepository implements IAlarmRepository {
       throw Exception('Lỗi khi tải danh sách báo thức: $e');
     }
   }
+
+  @override
+  Future<void> deleteAlarms(List<String> alarmIds) async {
+    try {
+      final userId = _auth.currentUser?.uid;
+      if (userId == null || userId.isEmpty) {
+        throw Exception('Vui lòng đăng nhập để xóa báo thức!');
+      }
+
+      final batch = _firestore.batch();
+      for (final id in alarmIds) {
+        final docRef = _firestore
+            .collection('users')
+            .doc(userId)
+            .collection('alarms')
+            .doc(id);
+        batch.delete(docRef);
+
+        // Hủy chuông trên máy
+        await Alarm.stop(id.hashCode.abs());
+      }
+
+      await batch.commit();
+    } catch (e) {
+      throw Exception('Lỗi khi xóa báo thức: $e');
+    }
+  }
 }

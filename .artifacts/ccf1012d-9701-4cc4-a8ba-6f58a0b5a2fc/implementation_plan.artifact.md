@@ -1,28 +1,28 @@
-# Tối ưu hóa UI Cảnh báo Giấc ngủ (Glow & Pill Integration)
+# Tái thiết kế Hero Section: Radiant Breathing Moon
 
-Kế hoạch này kết hợp hiệu ứng hào quang động và tích hợp màu sắc vào thành phần có sẵn để thông báo chất lượng thức giấc một cách tinh tế, không làm tốn diện tích giao diện.
+Kế hoạch này sẽ nâng cấp hoàn toàn diện mạo của nút "Start Sleep" trung tâm, biến nó thành một tác phẩm nghệ thuật chuyển động mang lại cảm giác thư giãn và cao cấp cho người dùng.
 
 ## User Review Required
 
-> [!NOTE]
-> Tôi sẽ loại bỏ Badge cảnh báo riêng biệt và thay thế bằng cách nhuộm màu trực tiếp cho nhãn "X Chu kỳ" kèm theo hiệu ứng tỏa sáng (Glow) ở trung tâm vòng tròn.
+> [!IMPORTANT]
+> **Hiệu ứng chuyển động phức hợp:** Tôi sẽ kết hợp cả hiệu ứng xoay (Rotation) và hiệu ứng hơi thở (Pulse/Breathing). Điều này tạo ra một thực thể "sống" ở trung tâm màn hình, giúp giảm căng thẳng cho người dùng trước khi đi ngủ.
 
 ## Proposed Changes
 
-### 1. Presentation Layer (UI Refinement)
+### 1. Presentation Layer (HomePage UI)
 
-#### [MODIFY] [set_alarm_page.dart](file:///E:/TuHoc/android/flutter/sleeping_app_flutter/lib/presentation/alarms/pages/set_alarm_page.dart)
-*   **Xóa bỏ `_buildQualityBadge`**: Loại bỏ thành phần gây tốn diện tích.
-*   **Nâng cấp "Viên thuốc" Chu kỳ**:
-    *   Đổi màu `backgroundColor` và `textColor` dựa trên `WakeUpQuality`.
-    *   Thêm icon nhỏ tương ứng (Check/Warning) vào trong viên thuốc.
-*   **Thêm hiệu ứng Hào quang (Glow)**:
-    *   Thêm `BoxShadow` với màu sắc tương ứng (`green`, `orange`, `red`) vào container chứa nội dung ở tâm vòng xoay.
-    *   Hiệu ứng sẽ mờ ảo (spreadRadius lớn, blurRadius lớn) để tạo cảm giác sang trọng.
+#### [MODIFY] [home_page.dart](file:///E:/TuHoc/android/flutter/sleeping_app_flutter/lib/presentation/home/pages/home_page.dart)
+*   **Thêm `_breathingController`**: Điều khiển nhịp điệu co giãn (Pulse) của các lớp hào quang.
+*   **Tái cấu trúc `_buildStartSleepHero`**:
+    *   **Lớp 1 (Deep Pulse Aura)**: Một vòng tròn hào quang ngoài cùng, co giãn chậm nhất để tạo chiều sâu.
+    *   **Lớp 2 (Double Orbit Rings)**: Hai vòng tròn mảnh xoay ngược chiều nhau, tạo hiệu ứng thiên văn huyền bí.
+    *   **Lớp 3 (The Moon Core)**: Khối trung tâm với hiệu ứng Gradient mượt mà, chứa đồng hồ số.
+*   **Typography**: Sử dụng font chữ mảnh, khoảng cách chữ rộng (letter spacing) để tăng vẻ sang trọng.
+*   **Tương tác**: Giữ nguyên tính năng chạm để vào `ActiveSleepScreen`.
 
 ## Verification Plan
 
 ### Manual Verification
-*   **Trạng thái Tỉnh táo**: Tâm vòng xoay có hào quang xanh nhẹ, nhãn chu kỳ màu xanh.
-*   **Trạng thái Cảnh báo SWS**: Tâm vòng xoay có hào quang đỏ mờ, nhãn chu kỳ màu đỏ kèm icon cảnh báo.
-*   **Trạng thái Cảnh báo REM**: Tâm vòng xoay có hào quang cam mờ, nhãn chu kỳ màu cam.
+*   Xác nhận hiệu ứng "hơi thở" (co giãn) diễn ra mượt mà, không bị giật lag.
+*   Kiểm tra đồng hồ số vẫn nổi bật và dễ đọc trên nền hào quang.
+*   Đảm bảo các vòng tròn xoay đúng tâm và không làm rối mắt.

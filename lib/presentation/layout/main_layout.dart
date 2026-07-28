@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../domain/repositories/alarm_repository.dart';
+import '../../domain/usecases/alarm/delete_alarms_usecase.dart';
 import '../../domain/usecases/alarm/get_alarms_usecase.dart';
 import '../../domain/usecases/alarm/save_alarm_usecase.dart';
 import '../alarms/bloc/alarms_bloc.dart';
@@ -25,31 +26,30 @@ class _MainLayoutState extends State<MainLayout> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
-    // Di chuyển _pages vào build để có thể truy cập context và inject UseCases
-    final List<Widget> pages = [
-      const HomePage(),
-      BlocProvider(
-        create: (context) {
-          final repo = context.read<IAlarmRepository>();
-          return AlarmBloc(
-            saveAlarmUseCase: SaveAlarmUseCase(repo),
-            getAlarmsUseCase: GetAlarmsUseCase(repo),
-          )..add(LoadAlarmsRequested());
-        },
-        child: const AlarmsPage(),
+    // Khởi tạo AlarmBloc ở cấp cao nhất của Layout để Home và Alarms dùng chung
+    return BlocProvider(
+      create: (context) {
+        final repo = context.read<IAlarmRepository>();
+        return AlarmBloc(
+          saveAlarmUseCase: SaveAlarmUseCase(repo),
+          getAlarmsUseCase: GetAlarmsUseCase(repo),
+          deleteAlarmsUseCase: DeleteAlarmsUseCase(repo),
+        )..add(LoadAlarmsRequested());
+      },
+      child: Scaffold(
+        extendBody: true,
+        backgroundColor: colors.surface,
+        body: IndexedStack(
+          index: _selectedIndex,
+          children: const [
+            HomePage(),
+            AlarmsPage(),
+            Center(child: Text('Sounds Page (Coming Soon)')),
+            Center(child: Text('Stats Page (Coming Soon)')),
+          ],
+        ),
+        bottomNavigationBar: _buildCustomBottomNav(colors),
       ),
-      const Center(child: Text('Sounds Page (Coming Soon)')),
-      const Center(child: Text('Stats Page (Coming Soon)')),
-    ];
-
-    return Scaffold(
-      extendBody: true,
-      backgroundColor: colors.surface,
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: pages,
-      ),
-      bottomNavigationBar: _buildCustomBottomNav(colors),
     );
   }
 

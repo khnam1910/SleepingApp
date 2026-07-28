@@ -167,362 +167,458 @@ class _AlarmsPageState extends State<AlarmsPage> {
     );
   }
 
+  PreferredSizeWidget _buildAppBar(AlarmState state, ColorScheme colors) {
+    if (state.isSelectionMode) {
+      return AppBar(
+        backgroundColor: colors.surface,
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () =>
+              context.read<AlarmBloc>().add(ClearSelectionRequested()),
+        ),
+        title: Text('${state.selectedAlarmIds.length} đã chọn'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_outline, color: Colors.red),
+            onPressed: () => _showDeleteConfirmation(context),
+          ),
+        ],
+      );
+    }
+    return const SharedAppBar();
+  }
+
+  void _showDeleteConfirmation(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Xóa lịch trình?'),
+        content: const Text(
+          'Bạn có chắc chắn muốn xóa các lịch trình đã chọn không?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              context.read<AlarmBloc>().add(DeleteSelectedAlarmsRequested());
+              Navigator.pop(dialogContext);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Xóa'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      extendBody: true,
-      extendBodyBehindAppBar: true,
-      backgroundColor: colors.surface,
-      appBar: const SharedAppBar(),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.only(
-          top: MediaQuery.of(context).padding.top + kToolbarHeight + 10,
-          left: 24,
-          right: 24,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Lịch trình của bạn',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: colors.onSurface,
-                  ),
-                ),
-                Text(
-                  'Xem tất cả',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: colors.primary,
-                  ),
-                ),
-              ],
+    return BlocBuilder<AlarmBloc, AlarmState>(
+      builder: (context, state) {
+        return Scaffold(
+          extendBody: true,
+          extendBodyBehindAppBar: true,
+          backgroundColor: colors.surface,
+          appBar: _buildAppBar(state, colors),
+          body: SingleChildScrollView(
+            padding: EdgeInsets.only(
+              top: MediaQuery.of(context).padding.top + kToolbarHeight + 10,
+              left: 24,
+              right: 24,
             ),
-            const SizedBox(height: 16),
-            ListView(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              padding: EdgeInsets.zero,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                BlocBuilder<AlarmBloc, AlarmState>(
-                  buildWhen: (previous, current) =>
-                      previous.alarms != current.alarms ||
-                      previous.status != current.status,
-                  builder: (context, state) {
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Lịch trình của bạn',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: colors.onSurface,
+                      ),
+                    ),
+                    if (!state.isSelectionMode)
+                      Text(
+                        'Xem tất cả',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: colors.primary,
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                ListView(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: EdgeInsets.zero,
+                  children: [
                     if (state.status == AlarmStatus.loading &&
-                        state.alarms.isEmpty) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    if (state.alarms.isEmpty) {
-                      return const Center(
+                        state.alarms.isEmpty)
+                      const Center(child: CircularProgressIndicator())
+                    else if (state.alarms.isEmpty)
+                      const Center(
                         child: Padding(
                           padding: EdgeInsets.symmetric(vertical: 20),
                           child: Text("Chưa có lịch trình nào"),
                         ),
-                      );
-                    }
-
-                    return ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      padding: EdgeInsets.zero,
-                      itemCount: state.alarms.length,
-                      itemBuilder: (context, index) {
-                        final alarm = state.alarms[index];
-                        return SavedAlarmCard(
-                          title: 'Lịch trình',
-                          wakeTime: alarm.wakeUpTime,
-                          bedTime: alarm.bedTime,
-                          duration: alarm.sleepDurationText,
-                          days: alarm.repeatDaysText,
-                          isActive: alarm.isEnabled,
-                          onToggle: (val) {
-                            context.read<AlarmBloc>().add(
-                              ToggleAlarmRequested(
-                                alarm: alarm,
-                                isEnabled: val,
-                              ),
-                            );
-                          },
-                          colors: colors,
+                      )
+                    else
+                      ...state.alarms.map((alarm) {
+                        final isSelected = state.selectedAlarmIds.contains(
+                          alarm.id,
                         );
-                      },
-                    );
-                  },
-                ),
-                GestureDetector(
-                  onTap: () {
-                    final alarmBloc = context.read<AlarmBloc>();
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => BlocProvider.value(
-                          value: alarmBloc,
-                          child: const SetAlarmPage(),
-                        ),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    margin: const EdgeInsets.only(top: 4),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    decoration: BoxDecoration(
-                      color: Colors.transparent,
-                      border: Border.all(
-                        color: colors.outlineVariant.withOpacity(0.5),
-                        style: BorderStyle.solid,
-                        width: 1.5,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.add_rounded,
-                          size: 20,
-                          color: colors.primary,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Thêm lịch trình mới',
-                          style: TextStyle(
-                            color: colors.primary,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 32),
-            CustomSegmentedToggle(
-              leftText: 'Tôi muốn thức\ndậy lúc...',
-              rightText: 'Tôi sẽ đi\nngủ lúc...',
-              selectedIndex: _selectedToggleIndex,
-              onChanged: (index) {
-                setState(() => _selectedToggleIndex = index);
-                final state = context.read<AlarmBloc>().state;
-                final targetTime = state.targetTime ?? _targetTime;
 
-                context.read<AlarmBloc>().add(
-                  CalculateCyclesRequested(
-                    time: targetTime,
-                    toggleIndex: index,
-                  ),
-                );
-              },
-              colors: colors,
-            ),
-            const SizedBox(height: 16),
-            BlocBuilder<AlarmBloc, AlarmState>(
-              buildWhen: (previous, current) =>
-                  previous.calculatedCycles != current.calculatedCycles ||
-                  previous.targetTime != current.targetTime ||
-                  previous.toggleIndex != current.toggleIndex ||
-                  previous.selectedCycleCount != current.selectedCycleCount,
-              builder: (context, state) {
-                final cycles = state.calculatedCycles;
-                final hasCalculated = cycles.isNotEmpty;
-                final displayTime = state.targetTime ?? _targetTime;
-
-                String cardTimeLabel = _selectedToggleIndex == 0
-                    ? 'Giờ đi ngủ'
-                    : 'Giờ thức dậy';
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () => _selectTime(context),
-                        borderRadius: BorderRadius.circular(24),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 16,
-                          ),
-                          decoration: BoxDecoration(
-                            color: colors.primaryContainer.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(
-                              color: colors.outlineVariant.withOpacity(0.3),
+                        return Dismissible(
+                          key: Key(alarm.id),
+                          direction: state.isSelectionMode
+                              ? DismissDirection.none
+                              : DismissDirection.endToStart,
+                          background: Container(
+                            alignment: Alignment.centerRight,
+                            padding: const EdgeInsets.only(right: 20),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.8),
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            child: const Icon(
+                              Icons.delete,
+                              color: Colors.white,
                             ),
                           ),
+                          onDismissed: (_) {
+                            context.read<AlarmBloc>().add(
+                              DeleteSingleAlarmRequested(alarm.id),
+                            );
+                          },
+                          child: SavedAlarmCard(
+                            title: 'Lịch trình',
+                            wakeTime: alarm.wakeUpTime,
+                            bedTime: alarm.bedTime,
+                            duration: alarm.sleepDurationText,
+                            days: alarm.repeatDaysText,
+                            isActive: alarm.isEnabled,
+                            isSelectionMode: state.isSelectionMode,
+                            isSelected: isSelected,
+                            onToggle: (val) {
+                              context.read<AlarmBloc>().add(
+                                ToggleAlarmRequested(
+                                  alarm: alarm,
+                                  isEnabled: val,
+                                ),
+                              );
+                            },
+                            onTap: () {
+                              if (state.isSelectionMode) {
+                                context.read<AlarmBloc>().add(
+                                  ToggleAlarmSelection(alarm.id),
+                                );
+                              } else {
+                                final alarmBloc = context.read<AlarmBloc>();
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => BlocProvider.value(
+                                      value: alarmBloc,
+                                      child: SetAlarmPage(existingAlarm: alarm),
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
+                            onLongPress: () {
+                              context.read<AlarmBloc>().add(
+                                ToggleSelectionModeRequested(
+                                  initialAlarmId: alarm.id,
+                                ),
+                              );
+                            },
+                            colors: colors,
+                          ),
+                        );
+                      }),
+                    if (!state.isSelectionMode)
+                      GestureDetector(
+                        onTap: () {
+                          final alarmBloc = context.read<AlarmBloc>();
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => BlocProvider.value(
+                                value: alarmBloc,
+                                child: const SetAlarmPage(),
+                              ),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.only(top: 4),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          decoration: BoxDecoration(
+                            color: Colors.transparent,
+                            border: Border.all(
+                              color: colors.outlineVariant.withOpacity(0.5),
+                              style: BorderStyle.solid,
+                              width: 1.5,
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
                           child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
-                                Icons.schedule,
-                                color: colors.onSurfaceVariant,
-                                size: 22,
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Text(
-                                  displayTime.formatHHmm(),
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: colors.onSurface,
-                                  ),
-                                ),
-                              ),
-                              Icon(
-                                Icons.edit,
-                                color: colors.outline,
+                                Icons.add_rounded,
                                 size: 20,
+                                color: colors.primary,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Thêm lịch trình mới',
+                                style: TextStyle(
+                                  color: colors.primary,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ],
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 32),
-                    if (hasCalculated) ...[
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Tính toán chu kỳ',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: colors.onSurface,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: () =>
-                                  _show90MinRuleDialog(context, colors),
-                              borderRadius: BorderRadius.circular(20),
-                              child: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: colors.primaryContainer.withOpacity(
-                                    0.4,
+                  ],
+                ),
+                const SizedBox(height: 32),
+                CustomSegmentedToggle(
+                  leftText: 'Tôi muốn thức\ndậy lúc...',
+                  rightText: 'Tôi sẽ đi\nngủ lúc...',
+                  selectedIndex: _selectedToggleIndex,
+                  onChanged: (index) {
+                    setState(() => _selectedToggleIndex = index);
+                    final state = context.read<AlarmBloc>().state;
+                    final targetTime = state.targetTime ?? _targetTime;
+
+                    context.read<AlarmBloc>().add(
+                      CalculateCyclesRequested(
+                        time: targetTime,
+                        toggleIndex: index,
+                      ),
+                    );
+                  },
+                  colors: colors,
+                ),
+                const SizedBox(height: 16),
+                BlocBuilder<AlarmBloc, AlarmState>(
+                  buildWhen: (previous, current) =>
+                      previous.calculatedCycles != current.calculatedCycles ||
+                      previous.targetTime != current.targetTime ||
+                      previous.toggleIndex != current.toggleIndex ||
+                      previous.selectedCycleCount != current.selectedCycleCount,
+                  builder: (context, state) {
+                    final cycles = state.calculatedCycles;
+                    final hasCalculated = cycles.isNotEmpty;
+                    final displayTime = state.targetTime ?? _targetTime;
+
+                    String cardTimeLabel = _selectedToggleIndex == 0
+                        ? 'Giờ đi ngủ'
+                        : 'Giờ thức dậy';
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => _selectTime(context),
+                            borderRadius: BorderRadius.circular(24),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 16,
+                              ),
+                              decoration: BoxDecoration(
+                                color: colors.primaryContainer.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(
+                                  color: colors.outlineVariant.withOpacity(0.3),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.schedule,
+                                    color: colors.onSurfaceVariant,
+                                    size: 22,
                                   ),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  Icons.lightbulb_outline_rounded,
-                                  color: colors.primary,
-                                  size: 18,
-                                ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Text(
+                                      displayTime.formatHHmm(),
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: colors.onSurface,
+                                      ),
+                                    ),
+                                  ),
+                                  Icon(
+                                    Icons.edit,
+                                    color: colors.outline,
+                                    size: 20,
+                                  ),
+                                ],
                               ),
                             ),
                           ),
-                          const Spacer(),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
+                        ),
+                        const SizedBox(height: 32),
+                        if (hasCalculated) ...[
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Text(
+                                'Tính toán chu kỳ',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: colors.onSurface,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () =>
+                                      _show90MinRuleDialog(context, colors),
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: colors.primaryContainer
+                                          .withOpacity(
+                                            0.4,
+                                          ),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Icons.lightbulb_outline_rounded,
+                                      color: colors.primary,
+                                      size: 18,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const Spacer(),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: colors.primaryContainer.withOpacity(
+                                    0.3,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  'GỢI Ý',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: colors.primary,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          ...cycles.map((cycle) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12.0),
+                              child: GestureDetector(
+                                onTap: () {
+                                  context.read<AlarmBloc>().add(
+                                    SelectCycleRequested(cycle.cycles),
+                                  );
+                                },
+                                child: SleepCycleCard(
+                                  timeLabel: cardTimeLabel,
+                                  wakeTime: cycle.time.formatHHmm(),
+                                  duration: cycle.durationStr,
+                                  cycles: cycle.cycles,
+                                  batteryBars: cycle.batteryBars,
+                                  isHighlighted:
+                                      cycle.cycles == state.selectedCycleCount,
+                                  colors: colors,
+                                ),
+                              ),
+                            );
+                          }),
+                          const SizedBox(height: 32),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 56,
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                print(
+                                  "Sẽ lưu mốc giờ: ${displayTime.formatHHmm()}",
+                                );
+                              },
+                              icon: const Icon(
+                                Icons.check_circle_outline,
+                                size: 20,
+                              ),
+                              label: const Text(
+                                'Áp dụng lịch ngủ',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: colors.primary,
+                                foregroundColor: colors.onPrimary,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                elevation: 0,
+                              ),
                             ),
-                            decoration: BoxDecoration(
-                              color: colors.primaryContainer.withOpacity(0.3),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Center(
                             child: Text(
-                              'GỢI Ý',
+                              'Các chu kỳ này đã bao gồm trung bình\n15 phút để chìm vào giấc ngủ.',
+                              textAlign: TextAlign.center,
                               style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: colors.primary,
-                                letterSpacing: 0.5,
+                                color: colors.outline,
+                                fontSize: 11,
+                                height: 1.4,
                               ),
                             ),
                           ),
                         ],
-                      ),
-                      const SizedBox(height: 16),
-                      ...cycles.map((cycle) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12.0),
-                          child: GestureDetector(
-                            onTap: () {
-                              context.read<AlarmBloc>().add(
-                                SelectCycleRequested(cycle.cycles),
-                              );
-                            },
-                            child: SleepCycleCard(
-                              timeLabel: cardTimeLabel,
-                              wakeTime: cycle.time.formatHHmm(),
-                              duration: cycle.durationStr,
-                              cycles: cycle.cycles,
-                              batteryBars: cycle.batteryBars,
-                              isHighlighted:
-                                  cycle.cycles == state.selectedCycleCount,
-                              colors: colors,
-                            ),
-                          ),
-                        );
-                      }),
-                      const SizedBox(height: 32),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 56,
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            print(
-                              "Sẽ lưu mốc giờ: ${displayTime.formatHHmm()}",
-                            );
-                          },
-                          icon: const Icon(
-                            Icons.check_circle_outline,
-                            size: 20,
-                          ),
-                          label: const Text(
-                            'Áp dụng lịch ngủ',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: colors.primary,
-                            foregroundColor: colors.onPrimary,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            elevation: 0,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Center(
-                        child: Text(
-                          'Các chu kỳ này đã bao gồm trung bình\n15 phút để chìm vào giấc ngủ.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: colors.outline,
-                            fontSize: 11,
-                            height: 1.4,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                );
-              },
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 120),
+              ],
             ),
-            const SizedBox(height: 120),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
