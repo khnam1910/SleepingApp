@@ -1,14 +1,14 @@
-# Tasks: Refactor Alarm Flow & UI Cleanup
+# Tasks: Ràng buộc Luồng Tư vấn - Bắt buộc chọn Giờ gốc
 
-- [ ] **Step 1: Cleanup AlarmsPage**
-    - [ ] Remove calculation toggle and list.
-    - [ ] Clean up unused imports and state usage.
-- [ ] **Step 2: Enhance SetAlarmPage**
-    - [ ] Implement `_buildQuickPicks` widget.
-    - [ ] Add logic to update `_bedTime` automatically when a quick pick is tapped.
-    - [ ] Ensure the sleep tracker wheel updates visually.
-- [ ] **Step 3: Bloc & Logic Cleanup**
-    - [ ] Remove unused events/states related to calculation if they are no longer needed globally.
-- [ ] **Step 4: Verification**
-    - [ ] Verify clean layout in AlarmsPage.
-    - [ ] Verify smart presets in SetAlarmPage.
+- [ ] **Bước 1: Cập nhật Logic Trạng thái (State)**
+    - [ ] Chuyển `_baseTime` sang kiểu `TimeOfDay?`.
+    - [ ] Cập nhật `initState` để gán `null` khi tạo mới.
+- [ ] **Bước 2: Nâng cấp Giao diện Điều khiển**
+    - [ ] Cập nhật `_buildActionButton` để hỗ trợ trạng thái `isEnabled`.
+    - [ ] Hiển thị `--:--` trong ô chọn giờ khi chưa có giá trị.
+- [ ] **Bước 3: Thực thi Ràng buộc (Constraint Implementation)**
+    - [ ] Chỉ cho phép nhấn 2 nút Option khi `_baseTime != null`.
+    - [ ] Cập nhật màu sắc (mờ đi) khi bị vô hiệu hóa.
+- [ ] **Bước 4: Kiểm tra**
+    - [ ] Xác nhận 2 nút bị khóa khi mới vào trang tạo mới.
+    - [ ] Xác nhận 2 nút mở khóa ngay sau khi chọn giờ xong.

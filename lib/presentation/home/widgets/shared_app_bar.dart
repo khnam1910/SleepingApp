@@ -73,8 +73,6 @@ class SharedAppBar extends StatelessWidget implements PreferredSizeWidget {
               String? avatarUrl;
               if (state is ProfileLoaded) {
                 avatarUrl = state.user.avatarUrl;
-                debugPrint(avatarUrl);
-
                 if (avatarUrl != null &&
                     avatarUrl.contains('graph.facebook.com')) {
                   avatarUrl = '$avatarUrl?width=200&height=200';

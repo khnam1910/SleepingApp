@@ -5,6 +5,7 @@ import '../../../core/utils/top_notification_helper.dart';
 import '../../../data/models/alarm_schedules_model.dart';
 import '../../../domain/entities/alarm_schedules_entity.dart';
 import '../../../domain/entities/sleep_conflict.dart';
+import '../../../domain/entities/sleep_cycle.dart';
 import '../../../domain/entities/wake_up_quality.dart';
 import '../../../domain/utils/sleep_math_utils.dart';
 import '../bloc/alarms_bloc.dart';
@@ -12,6 +13,7 @@ import '../bloc/alarms_event.dart';
 import '../bloc/alarms_state.dart';
 import '../extensions/duration_extension.dart';
 import '../extensions/time_of_day_extension.dart';
+import '../widgets/samsung_time_picker.dart';
 import '../widgets/sleep_schedule_tracker.dart';
 
 class SetAlarmPage extends StatefulWidget {
@@ -29,6 +31,11 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
   bool _isVibrationActive = true;
   final List<String> _dayLabels = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
   bool _isDialDragging = false;
+
+  // New State for suggested calculations
+  TimeOfDay? _baseTime;
+  bool _showSuggestions = false;
+  int _calculationMode = 0; // 0: Fix Wake, 1: Fix Bed
 
   void _saveWithConflictCheck() {
     List<int> repeatDays = [];
@@ -110,10 +117,34 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
         int weekday = index + 2;
         return alarm.repeatDays.contains(weekday);
       });
+      _baseTime = _wakeTime;
     } else {
       _bedTime = const TimeOfDay(hour: 23, minute: 0);
       _wakeTime = const TimeOfDay(hour: 6, minute: 30);
       _selectedDays = [true, true, true, true, true, false, false];
+      _baseTime = null;
+    }
+  }
+
+  Future<void> _selectBaseTime() async {
+    final colors = Theme.of(context).colorScheme;
+    final initialTime = _baseTime ?? const TimeOfDay(hour: 7, minute: 0);
+
+    final TimeOfDay? picked = await showDialog<TimeOfDay>(
+      context: context,
+      builder: (BuildContext context) {
+        return SamsungTimePickerDialog(
+          initialTime: initialTime,
+          colors: colors,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _baseTime = picked;
+        _showSuggestions = false; // Reset suggestions when base time changes
+      });
     }
   }
 
@@ -124,105 +155,296 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
     ColorScheme colors, {
     bool isHighlight = false,
   }) {
-    return Column(
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: isHighlight ? colors.primary : colors.outline,
-              size: 16,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 13,
-                color: colors.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                color: isHighlight ? colors.primary : colors.outline,
+                size: 16,
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Text(
-          time.formatHHmm(),
-          style: TextStyle(
-            fontSize: 26,
-            fontWeight: FontWeight.bold,
-            color: isHighlight ? colors.primary : colors.onSurface,
-            letterSpacing: 1.0,
+              const SizedBox(width: 6),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: colors.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
-        ),
-      ],
+          const SizedBox(height: 8),
+          Text(
+            time.formatHHmm(),
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.bold,
+              color: isHighlight ? colors.primary : colors.onSurface,
+              letterSpacing: 1.0,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  void _applyQuickPick(int cycles) {
-    // Logic: Giữ nguyên giờ thức, lùi giờ ngủ lại (cycles * 90) + 15p
-    final int wakeTotalMins = _wakeTime.hour * 60 + _wakeTime.minute;
-    final int sleepMins = (cycles * 90) + 15;
-
-    int bedTotalMins = (wakeTotalMins - sleepMins + 1440) % 1440;
-
+  void _applySuggestion(SleepCycle cycle) {
+    if (_baseTime == null) return;
     setState(() {
-      _bedTime = TimeOfDay(
-        hour: bedTotalMins ~/ 60,
-        minute: bedTotalMins % 60,
-      );
+      if (_calculationMode == 0) {
+        _wakeTime = _baseTime!;
+        _bedTime = TimeOfDay(hour: cycle.hour, minute: cycle.minute);
+      } else {
+        _bedTime = _baseTime!;
+        _wakeTime = TimeOfDay(hour: cycle.hour, minute: cycle.minute);
+      }
     });
   }
 
-  Widget _buildQuickPicks(ColorScheme colors) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _buildPickChip('7.5 GIỜ', () => _applyQuickPick(5), colors),
-        const SizedBox(width: 12),
-        _buildPickChip('9 GIỜ', () => _applyQuickPick(6), colors, isBest: true),
-      ],
-    );
-  }
+  Widget _buildSmartSuggestions(ColorScheme colors) {
+    final bool isEnabled = _baseTime != null;
 
-  Widget _buildPickChip(
-    String label,
-    VoidCallback onTap,
-    ColorScheme colors, {
-    bool isBest = false,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isBest
-              ? colors.primary.withValues(alpha: 0.1)
-              : colors.surfaceContainerHighest.withValues(alpha: 0.3),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isBest
-                ? colors.primary.withValues(alpha: 0.5)
-                : colors.outlineVariant.withValues(alpha: 0.2),
-          ),
-        ),
-        child: Row(
+    List<SleepCycle> filtered = [];
+    if (isEnabled) {
+      final suggestions = SleepMathUtils.calculateSleepCycles(
+        baseHour: _baseTime!.hour,
+        baseMinute: _baseTime!.minute,
+        isWakeUpTime: _calculationMode == 0,
+      );
+      filtered = suggestions
+          .where((c) => c.cycles >= 4 && c.cycles <= 6)
+          .toList();
+    }
+
+    return Column(
+      children: [
+        // 1. Hai nút lựa chọn ngữ cảnh - Đảo lên trên, đối xứng
+        Row(
           children: [
-            if (isBest) ...[
-              Icon(Icons.auto_awesome, size: 12, color: colors.primary),
-              const SizedBox(width: 6),
-            ],
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: isBest ? colors.primary : colors.onSurfaceVariant,
+            Expanded(
+              child: _buildActionButton(
+                'TÔI SẼ NGỦ',
+                _calculationMode == 1,
+                isEnabled,
+                () => setState(() {
+                  _calculationMode = 1;
+                  _showSuggestions = true;
+                }),
+                colors,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildActionButton(
+                'TÔI SẼ THỨC',
+                _calculationMode == 0,
+                isEnabled,
+                () => setState(() {
+                  _calculationMode = 0;
+                  _showSuggestions = true;
+                }),
+                colors,
               ),
             ),
           ],
         ),
+
+        const SizedBox(height: 12),
+
+        // 2. Mốc giờ gốc - Nằm dưới, thiết kế thanh mảnh
+        InkWell(
+          onTap: _selectBaseTime,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isEnabled
+                    ? colors.primary.withValues(alpha: 0.3)
+                    : colors.outline.withValues(alpha: 0.2),
+                width: 1.0,
+              ),
+              color: colors.surfaceContainerHighest.withValues(alpha: 0.15),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.access_time_rounded,
+                  color: isEnabled
+                      ? colors.primary.withValues(alpha: 0.8)
+                      : colors.outline.withValues(alpha: 0.5),
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  _baseTime?.formatHHmm() ?? '--:--',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                    color: isEnabled ? colors.onSurface : colors.outline,
+                  ),
+                ),
+                const Spacer(),
+                Icon(
+                  Icons.edit_note_rounded,
+                  color: colors.outline.withValues(alpha: 0.5),
+                  size: 20,
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        if (_showSuggestions) ...[
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: filtered.map((cycle) {
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                  child: _buildSuggestionChip(cycle, colors),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildActionButton(
+    String label,
+    bool isActive,
+    bool isEnabled,
+    VoidCallback onTap,
+    ColorScheme colors,
+  ) {
+    return InkWell(
+      onTap: isEnabled ? onTap : null,
+      borderRadius: BorderRadius.circular(24),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        decoration: BoxDecoration(
+          color: !isEnabled
+              ? colors.surfaceContainerHighest.withValues(alpha: 0.1)
+              : isActive
+              ? colors.primary
+              : colors.surfaceContainerHighest.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: isEnabled && isActive
+                ? colors.primary
+                : colors.outlineVariant.withValues(alpha: 0.1),
+          ),
+        ),
+        child: Opacity(
+          opacity: isEnabled ? 1.0 : 0.3,
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w800,
+              color: isActive && isEnabled
+                  ? colors.onPrimary
+                  : colors.onSurfaceVariant,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSuggestionChip(SleepCycle cycle, ColorScheme colors) {
+    Color chipColor;
+    String label;
+
+    if (cycle.cycles == 6) {
+      chipColor = Colors.green;
+      label = 'TỐT NHẤT';
+    } else if (cycle.cycles == 5) {
+      chipColor = Colors.orange;
+      label = 'KHÁ';
+    } else {
+      chipColor = Colors.red;
+      label = 'TỐI THIỂU';
+    }
+
+    final currentTargetTime = _calculationMode == 0 ? _bedTime : _wakeTime;
+    final bool isSelected =
+        currentTargetTime.hour == cycle.hour &&
+        currentTargetTime.minute == cycle.minute;
+    final timeStr = TimeOfDay(
+      hour: cycle.hour,
+      minute: cycle.minute,
+    ).formatHHmm();
+
+    return InkWell(
+      onTap: () => _applySuggestion(cycle),
+      borderRadius: BorderRadius.circular(12),
+      child: Column(
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? chipColor.withValues(alpha: 0.9)
+                  : chipColor.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isSelected
+                    ? chipColor
+                    : chipColor.withValues(alpha: 0.2),
+                width: 1.0,
+              ),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  timeStr,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: isSelected ? Colors.white : colors.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${cycle.cycles} Chu kỳ',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: isSelected
+                        ? Colors.white.withValues(alpha: 0.8)
+                        : chipColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 8,
+              fontWeight: FontWeight.w800,
+              color: chipColor.withValues(alpha: 0.6),
+              letterSpacing: 0.5,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -231,7 +453,6 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
-    // Tính toán thời gian ngủ và chu kỳ
     final sleepMins = SleepMathUtils.getDifferenceMinutes(
       _bedTime.hour,
       _bedTime.minute,
@@ -241,7 +462,6 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
     final cycles = (sleepMins / 90).toStringAsFixed(1);
     final quality = SleepMathUtils.getWakeUpQuality(sleepMins);
 
-    // Xác định màu sắc và icon cho chất lượng thức giấc
     Color qualityColor;
     IconData qualityIcon;
     switch (quality) {
@@ -284,11 +504,11 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
             physics: _isDialDragging
                 ? const NeverScrollableScrollPhysics()
                 : const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             child: Column(
               children: [
                 Container(
-                  padding: const EdgeInsets.only(top: 32, bottom: 24),
+                  padding: const EdgeInsets.only(top: 16, bottom: 16),
                   decoration: BoxDecoration(
                     color: colors.surfaceContainerHighest.withValues(
                       alpha: 0.3,
@@ -332,7 +552,6 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                                 ),
                               ),
                               const SizedBox(height: 2),
-                              // Con số thời gian với hiệu ứng Glow
                               Container(
                                 decoration: BoxDecoration(
                                   boxShadow: [
@@ -356,7 +575,6 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              // "Viên thuốc" chu kỳ tích hợp màu sắc và icon
                               AnimatedContainer(
                                 duration: const Duration(milliseconds: 300),
                                 padding: const EdgeInsets.symmetric(
@@ -395,9 +613,12 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 24),
-                      _buildQuickPicks(colors),
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 16),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: _buildSmartSuggestions(colors),
+                      ),
+                      const SizedBox(height: 16),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 32),
                         child: Row(
@@ -409,11 +630,12 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                                 _bedTime,
                                 Icons.bedtime_rounded,
                                 colors,
+                                isHighlight: true,
                               ),
                             ),
                             Container(
                               width: 1,
-                              height: 40,
+                              height: 32,
                               color: colors.outlineVariant.withValues(
                                 alpha: 0.4,
                               ),
@@ -433,11 +655,11 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 20,
-                    vertical: 24,
+                    vertical: 16,
                   ),
                   decoration: BoxDecoration(
                     color: colors.surfaceContainerHighest.withValues(

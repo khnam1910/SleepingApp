@@ -4,7 +4,6 @@ import '../../../domain/entities/alarm_schedules_entity.dart';
 import '../../../domain/usecases/alarm/delete_alarms_usecase.dart';
 import '../../../domain/usecases/alarm/get_alarms_usecase.dart';
 import '../../../domain/usecases/alarm/save_alarm_usecase.dart';
-import '../../../domain/utils/sleep_math_utils.dart';
 import 'alarms_event.dart';
 import 'alarms_state.dart';
 
@@ -21,7 +20,6 @@ class AlarmBloc extends Bloc<AlarmEvent, AlarmState> {
        _getAlarmsUseCase = getAlarmsUseCase,
        _deleteAlarmsUseCase = deleteAlarmsUseCase,
        super(const AlarmState()) {
-    on<CalculateCyclesRequested>(_onCalculateCyclesRequested);
     on<SaveAlarmRequested>(_onSaveAlarmRequested);
     on<LoadAlarmsRequested>(_onLoadAlarmsRequested);
     on<ToggleAlarmRequested>(_onToggleAlarmRequested);
@@ -31,27 +29,6 @@ class AlarmBloc extends Bloc<AlarmEvent, AlarmState> {
     on<ClearSelectionRequested>(_onClearSelectionRequested);
     on<DeleteSelectedAlarmsRequested>(_onDeleteSelectedAlarmsRequested);
     on<DeleteSingleAlarmRequested>(_onDeleteSingleAlarmRequested);
-  }
-
-  void _onCalculateCyclesRequested(
-    CalculateCyclesRequested event,
-    Emitter<AlarmState> emit,
-  ) {
-    final results = SleepMathUtils.calculateSleepCycles(
-      baseHour: event.time.hour,
-      baseMinute: event.time.minute,
-      isWakeUpTime: event.toggleIndex == 0,
-    );
-
-    emit(
-      state.copyWith(
-        calculatedCycles: results,
-        targetTime: event.time,
-        toggleIndex: event.toggleIndex,
-        selectedCycleCount: 6,
-        status: AlarmStatus.calculationSuccess,
-      ),
-    );
   }
 
   void _onSelectCycleRequested(
