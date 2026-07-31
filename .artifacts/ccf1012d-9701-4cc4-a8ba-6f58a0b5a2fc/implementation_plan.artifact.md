@@ -1,32 +1,37 @@
-# Ràng buộc Luồng Tư vấn: Bắt buộc chọn Giờ gốc
+# Sửa lỗi build và lấy Múi giờ không dùng Plugin
 
-Kế hoạch này thiết lập một luồng thao tác bắt buộc: Người dùng phải chọn một mốc thời gian cụ thể trước khi các tùy chọn ngữ cảnh (Ngủ/Thức) được kích hoạt. Điều này giúp đảm bảo dữ liệu tính toán luôn chính xác và tránh các thao tác nhầm lẫn.
+Lỗi `Unresolved reference 'Registrar'` cho thấy plugin `flutter_timezone` không tương thích với phiên bản Android/Kotlin mới của dự án. Chúng ta sẽ thay thế nó bằng giải pháp Native (Method Channel) để đảm bảo ứng dụng build thành công và chạy ổn định nhất.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> **Trạng thái Khóa (Locked State):**
-> - Hai nút **"TÔI SẼ NGỦ"** và **"TÔI SẼ THỨC"** sẽ ở trạng thái vô hiệu hóa (disabled) khi bắt đầu thêm báo thức mới.
-> - Người dùng phải nhấn vào ô chọn giờ để nhập một mốc thời gian. Ngay khi có giờ, các nút này sẽ tự động "mở khóa" (enabled).
+> **Thay đổi quan trọng:** Tôi sẽ gỡ bỏ hoàn toàn `flutter_timezone` khỏi `pubspec.yaml` để giải quyết lỗi build.
+> Múi giờ sẽ được lấy trực tiếp từ hệ điều hành Android thông qua một đoạn code nhỏ trong `MainActivity.kt`.
 
-## Proposed Changes
+## Các thay đổi đề xuất
 
-### 1. Presentation Layer (SetAlarmPage Logic)
+### 1. [Dependencies]
 
-#### [MODIFY] [set_alarm_page.dart](file:///E:/TuHoc/android/flutter/sleeping_app_flutter/lib/presentation/alarms/pages/set_alarm_page.dart)
-*   **Chỉnh sửa State**:
-    *   Đổi `late TimeOfDay _baseTime` thành `TimeOfDay? _baseTime`.
-    *   `initState`: Nếu không có báo thức cũ, đặt `_baseTime = null`.
-*   **Cập nhật `_buildSmartSuggestions`**:
-    *   Thêm kiểm tra `bool isEnabled = _baseTime != null`.
-    *   Ô hiển thị giờ: Nếu `_baseTime == null`, hiển thị `--:--`.
-*   **Nâng cấp `_buildActionButton`**:
-    *   Thêm tham số `bool isEnabled`.
-    *   Xử lý UI khi bị khóa: Màu xám mờ, không nhận thao tác chạm.
+#### [MODIFY] [pubspec.yaml](file:///E:/TuHoc/android/flutter/sleeping_app_flutter/pubspec.yaml)
+- Gỡ bỏ `flutter_timezone: ^2.1.0`.
 
-## Verification Plan
+### 2. [Android Native]
 
-### Manual Verification
-1.  **Thử nghiệm Khóa**: Mở trang tạo mới -> Nhấn thử vào 2 nút Option -> Xác nhận không có phản ứng.
-2.  **Thử nghiệm Mở khóa**: Chọn một mốc giờ bất kỳ -> Xác nhận 2 nút Option đổi màu và có thể nhấn được.
-3.  **Hành vi Gợi ý**: Chỉ khi nút đã mở khóa và được nhấn, các thẻ gợi ý mới xuất hiện.
+#### [MODIFY] [MainActivity.kt](file:///E:/TuHoc/android/flutter/sleeping_app_flutter/android/app/src/main/kotlin/com/example/sleeping_app_flutter/MainActivity.kt)
+- Thêm logic `MethodChannel` để trả về ID múi giờ của hệ thống (`java.util.TimeZone.getDefault().id`).
+
+### 3. [Core Services]
+
+#### [MODIFY] [pre_alarm_service.dart](file:///E:/TuHoc/android/flutter/sleeping_app_flutter/lib/core/services/pre_alarm_service.dart)
+- Gỡ bỏ import `flutter_timezone`.
+- Cập nhật hàm `init()` để gọi Method Channel lấy múi giờ thay vì dùng plugin.
+
+## Kế hoạch kiểm tra
+
+### Kiểm tra tự động
+- Chạy `flutter pub get`.
+- Chạy ứng dụng và xác nhận lỗi biên dịch Kotlin đã biến mất hoàn toàn.
+
+### Kiểm tra thủ công
+- Kiểm tra log `PreAlarmService: Timezone set to ...` để xác nhận múi giờ nhận được đúng (ví dụ: `Asia/Ho_Chi_Minh`).
+- Đặt báo thức và xác nhận thông báo nhắc nhở 5 phút xuất hiện đúng giờ.

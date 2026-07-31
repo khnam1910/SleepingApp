@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sleeping_app_flutter/presentation/auth/pages/login_page.dart';
 import 'package:sleeping_app_flutter/presentation/layout/main_layout.dart';
 import 'package:sleeping_app_flutter/presentation/profile/bloc/profile_bloc.dart';
+import 'core/services/pre_alarm_service.dart';
 
 import 'core/theme/app_colors.dart';
 import 'core/theme/app_typography.dart';
@@ -34,6 +35,7 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   await Alarm.init();
+  await PreAlarmService.init();
   runApp(const SleepingApp());
 }
 

@@ -37,6 +37,18 @@ class AlarmSchedule {
     return parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0;
   }
 
+  // Helper bóc tách giờ từ String "HH:mm" cho giờ ngủ
+  int get _bedHour {
+    final parts = bedTime.split(':');
+    return parts.isNotEmpty ? int.tryParse(parts[0]) ?? 0 : 0;
+  }
+
+  // Helper bóc tách phút từ String "HH:mm" cho giờ ngủ
+  int get _bedMinute {
+    final parts = bedTime.split(':');
+    return parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0;
+  }
+
   // Kiểm tra xem báo thức có lặp lại không
   bool get isRepeating => repeatDays.isNotEmpty;
 
@@ -56,6 +68,44 @@ class AlarmSchedule {
     if (!isRepeating) {
       if (nextTime.isBefore(currentTime) ||
           nextTime.isAtSameMomentAs(currentTime)) {
+        return nextTime.add(const Duration(days: 1));
+      }
+      return nextTime;
+    }
+
+    // Trường hợp 2: Có lặp lại theo ngày trong tuần
+    int currentWeekday = currentTime.weekday;
+    if (repeatDays.contains(currentWeekday) && nextTime.isAfter(currentTime)) {
+      return nextTime;
+    }
+
+    int daysToAdd = 1;
+    while (daysToAdd <= 7) {
+      int nextWeekday = (currentWeekday + daysToAdd - 1) % 7 + 1;
+      if (repeatDays.contains(nextWeekday)) {
+        break;
+      }
+      daysToAdd++;
+    }
+
+    return nextTime.add(Duration(days: daysToAdd));
+  }
+
+  // Tính toán thời điểm đi ngủ tiếp theo
+  DateTime? getNextBedTime(DateTime currentTime) {
+    if (!isEnabled) return null;
+
+    var nextTime = DateTime(
+      currentTime.year,
+      currentTime.month,
+      currentTime.day,
+      _bedHour,
+      _bedMinute,
+    );
+
+    // Trường hợp 1: Không lặp lại
+    if (!isRepeating) {
+      if (nextTime.isBefore(currentTime)) {
         return nextTime.add(const Duration(days: 1));
       }
       return nextTime;

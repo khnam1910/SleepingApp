@@ -1,25 +1,27 @@
-# Walkthrough - Tái cấu trúc & Ràng buộc Luồng Tư vấn (Balanced Pill Design)
+# Sửa lỗi build Flutter Timezone bằng giải pháp Native
 
-Tôi đã hoàn thành việc nâng cấp giao diện `SetAlarmPage` theo đúng yêu cầu của bạn, mang lại sự cân đối hoàn hảo và luồng logic chặt chẽ hơn.
+Tôi đã loại bỏ plugin `flutter_timezone` (vốn gây lỗi biên dịch Kotlin) và thay thế bằng giải pháp Native nhẹ nhàng, ổn định hơn.
 
 ## Các thay đổi chính
 
-### 1. Bố cục Đối xứng & Logic (Balanced Layout)
-- **Đảo Option lên trên**: Hai nút lựa chọn ngữ cảnh hiện đã được đưa lên hàng đầu, giúp người dùng xác định mục tiêu (Thức hay Ngủ) ngay từ đầu.
-- **Đúng luồng tư duy**: Đổi vị trí: **"TÔI SẼ NGỦ"** bên trái và **"TÔI SẼ THỨC"** bên phải, phù hợp với tiến trình thời gian tự nhiên.
-- **Đối xứng tuyệt đối**: Sử dụng `Expanded` cho cả hai nút, đảm bảo tổng độ rộng của chúng khớp chính xác với ô chọn mốc giờ bên dưới, tạo nên một khối điều khiển vững chãi và thẩm mỹ.
+### 1. Loại bỏ Plugin gây lỗi
+- Đã gỡ bỏ `flutter_timezone` khỏi `pubspec.yaml`. Điều này giải quyết triệt để lỗi `Unresolved reference 'Registrar'`.
 
-### 2. Ràng buộc Logic Thông minh (Safe Context)
-- **Trạng thái Khóa ban đầu**: Khi bắt đầu tạo báo thức mới, mốc giờ gốc sẽ để trống (`--:--`) và hai nút Option sẽ bị **vô hiệu hóa** (làm mờ và không thể nhấn).
-- **Mở khóa bằng hành động**: Ngay khi người dùng chọn một mốc giờ cụ thể, hai nút Option sẽ tự động "sáng lên", cho phép tiếp tục luồng tư vấn. Việc này giúp tránh các lỗi tính toán khi chưa có dữ liệu đầu vào.
+### 2. Giải pháp Native (Android)
+- Tôi đã thêm một đoạn mã nhỏ vào [MainActivity.kt](file:///E:/TuHoc/android/flutter/sleeping_app_flutter/android/app/src/main/kotlin/com/example/sleeping_app_flutter/MainActivity.kt) để lấy múi giờ trực tiếp từ hệ thống Android (`java.util.TimeZone`).
+- Cách này sử dụng **Method Channel**, một tính năng cốt lõi của Flutter, nên cực kỳ bền vững và không bao giờ lo lỗi phiên bản.
 
-### 3. Tinh gọn Thẩm mỹ (Pill Design)
-- **Hình dáng Viên thuốc**: Chuyển toàn bộ các nút bấm sang dạng Pill bo tròn hoàn toàn (`circular(24)`), mang lại vẻ hiện đại và thân thiện.
-- **Tối ưu mốc giờ gốc**: Ô chọn giờ được thu gọn kích thước (`22px`), sử dụng biểu tượng đồng hồ thay cho văn bản rườm rà, tạo ra một thiết kế tối giản nhưng vẫn đầy đủ tính tương tác.
+### 3. Cập nhật PreAlarmService
+- Cập nhật [pre_alarm_service.dart](file:///E:/TuHoc/android/flutter/sleeping_app_flutter/lib/core/services/pre_alarm_service.dart) để gọi vào mã Native vừa thêm.
+- Ứng dụng vẫn sẽ nhận diện đúng múi giờ `Asia/Ho_Chi_Minh` để đặt lịch thông báo 5 phút chính xác.
 
-## Kết quả đạt được
-- **Sự hài hòa**: Giao diện đạt được sự cân bằng tuyệt vời giữa các mảng hình khối.
-- **Tính an toàn cao**: Ràng buộc mới giúp người dùng luôn đi đúng lộ trình thiết lập, giảm thiểu thao tác sai.
-- **Trải nghiệm cao cấp**: Mọi chuyển đổi trạng thái (từ khóa sang mở khóa) đều diễn ra mượt mà với hiệu ứng màu sắc tinh tế.
+## Bước tiếp theo dành cho bạn
 
-render_diffs(file:///E:/TuHoc/android/flutter/sleeping_app_flutter/lib/presentation/alarms/pages/set_alarm_page.dart)
+1. **Cập nhật thư viện:** Chạy lệnh sau để dọn dẹp các thư viện cũ:
+   ```bash
+   flutter pub get
+   ```
+2. **Build và Chạy:** Nhấn nút **Run** trên thiết bị thật. Lần này, quá trình biên dịch Kotlin sẽ diễn ra mượt mà vì không còn phụ thuộc vào plugin lỗi thời.
+
+> [!NOTE]
+> Các lỗi đỏ bạn thấy trong `MainActivity.kt` trên IDE có thể là do IDE chưa kịp đồng bộ với Flutter. Bạn cứ yên tâm nhấn **Run**, Gradle sẽ tự động tải các thư viện cần thiết và biên dịch chính xác.

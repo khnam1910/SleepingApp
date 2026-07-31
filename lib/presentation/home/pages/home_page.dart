@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sleeping_app_flutter/presentation/home/widgets/shared_app_bar.dart';
 
+import '../../../core/services/pre_alarm_service.dart';
 import '../../../domain/entities/alarm_schedules_entity.dart';
 import '../../../domain/utils/sleep_math_utils.dart';
 import '../../alarms/bloc/alarms_bloc.dart';
@@ -15,8 +16,6 @@ import '../../profile/bloc/profile_bloc.dart';
 import '../../profile/bloc/profile_event.dart';
 import '../../profile/bloc/profile_state.dart';
 import '../widgets/smooth_chart_widget.dart';
-import 'active_sleep_pages.dart';
-import '../../../core/utils/top_notification_helper.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -67,6 +66,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         ProfileLoadRequested(userId: authState.userId),
       );
     }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Đợi 1 giây để đảm bảo UI đã sẵn sàng và Activity đã ổn định
+      await Future.delayed(const Duration(seconds: 1));
+      if (mounted) {
+        PreAlarmService.requestDndPermission(context);
+      }
+    });
   }
 
   @override
@@ -122,7 +129,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 const SizedBox(height: 40),
                 _buildSectionTitle("LAST NIGHT'S SLEEP", colors),
                 const SizedBox(height: 16),
-                _buildQuickStats(colors, sleepMins),
+                _buildQuickStats(context, colors, sleepMins),
                 const SizedBox(height: 16),
                 _buildStreakCard(colors),
                 const SizedBox(height: 16),
@@ -134,30 +141,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             ),
           );
         },
-      ),
-    );
-  }
-
-  void _showSleepConfirmation(
-    BuildContext context,
-    ColorScheme colors,
-    AlarmSchedule? nextAlarm,
-  ) {
-    if (nextAlarm == null) {
-      showTopNotification(
-        context,
-        'Bạn chưa bật lịch trình báo thức nào. Hãy thiết lập trong tab Báo thức nhé!',
-        icon: Icons.notifications_off_outlined,
-      );
-      return;
-    }
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ActiveSleepScreen(
-          wakeUpTime: nextAlarm.wakeUpTime,
-        ),
       ),
     );
   }
@@ -191,7 +174,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w800,
-                color: colors.primary.withOpacity(0.8),
+                color: colors.primary.withValues(alpha: 0.8),
                 letterSpacing: 1.2,
               ),
             ),
@@ -227,21 +210,21 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            colors.primaryContainer.withOpacity(0.3),
+            colors.primaryContainer.withValues(alpha: 0.3),
             colors.surface,
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: colors.primary.withOpacity(0.1)),
+        border: Border.all(color: colors.primary.withValues(alpha: 0.1)),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: colors.primary.withOpacity(0.1),
+              color: colors.primary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -295,175 +278,172 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     return Column(
       children: [
         Center(
-          child: GestureDetector(
-            onTap: () => _showSleepConfirmation(context, colors, nextAlarm),
-            child: SizedBox(
-              width: 280,
-              height: 280,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // Lớp 1: Deep Pulse Aura (Hào quang co giãn chậm)
-                  AnimatedBuilder(
-                    animation: _pulseAnimation,
-                    builder: (context, child) {
-                      return Container(
-                        width: 260 * _pulseAnimation.value,
-                        height: 260 * _pulseAnimation.value,
+          child: SizedBox(
+            width: 280,
+            height: 280,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Lớp 1: Deep Pulse Aura (Hào quang co giãn chậm)
+                AnimatedBuilder(
+                  animation: _pulseAnimation,
+                  builder: (context, child) {
+                    return Container(
+                      width: 260 * _pulseAnimation.value,
+                      height: 260 * _pulseAnimation.value,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: colors.primary.withValues(alpha: 0.05),
+                      ),
+                    );
+                  },
+                ),
+
+                // Lớp 2: Outer Rotating Ring (Vòng xoay mảnh bên ngoài)
+                AnimatedBuilder(
+                  animation: _rotateController,
+                  builder: (context, child) {
+                    return Transform.rotate(
+                      angle: _rotateController.value * 2 * math.pi,
+                      child: Container(
+                        width: 220,
+                        height: 220,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: colors.primary.withOpacity(0.05),
-                        ),
-                      );
-                    },
-                  ),
-
-                  // Lớp 2: Outer Rotating Ring (Vòng xoay mảnh bên ngoài)
-                  AnimatedBuilder(
-                    animation: _rotateController,
-                    builder: (context, child) {
-                      return Transform.rotate(
-                        angle: _rotateController.value * 2 * math.pi,
-                        child: Container(
-                          width: 220,
-                          height: 220,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: colors.primary.withOpacity(0.2),
-                              width: 1,
-                              style: BorderStyle.solid,
-                            ),
-                          ),
-                          child: Stack(
-                            children: [
-                              Positioned(
-                                top: 20,
-                                left: 20,
-                                child: Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    color: colors.primary.withOpacity(0.5),
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              ),
-                            ],
+                          border: Border.all(
+                            color: colors.primary.withValues(alpha: 0.2),
+                            width: 1,
                           ),
                         ),
-                      );
-                    },
-                  ),
-
-                  // Lớp 3: Inner Counter-Rotating Ring (Vòng xoay ngược chiều)
-                  AnimatedBuilder(
-                    animation: _rotateController,
-                    builder: (context, child) {
-                      return Transform.rotate(
-                        angle: -_rotateController.value * 4 * math.pi,
-                        child: Container(
-                          width: 190,
-                          height: 190,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: colors.primary.withOpacity(0.1),
-                              width: 1,
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-
-                  // Lớp 4: The Moon Core (Lõi trung tâm rực rỡ - Phương án 1: Hợp nhất tại tâm)
-                  Container(
-                    width: 175,
-                    height: 175,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          colors.primary,
-                          colors.primary.withOpacity(0.8),
-                        ],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: colors.primary.withOpacity(0.4),
-                          blurRadius: 40,
-                          spreadRadius: 8,
-                        ),
-                      ],
-                    ),
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        // Biểu tượng Mặt trăng (Lớp nền mờ ở chính giữa)
-                        Center(
-                          child: Icon(
-                            Icons.nightlight_round,
-                            color: colors.onPrimary.withOpacity(0.08),
-                            size: 110, // Phóng lớn bao quanh đồng hồ
-                          ),
-                        ),
-
-                        // Cụm nội dung chính (Foreground)
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                        child: Stack(
                           children: [
-                            Text(
-                              timeStr,
-                              style: TextStyle(
-                                color: colors.onPrimary,
-                                fontSize:
-                                    56, // Tăng size lên một chút cho hoành tráng
-                                fontWeight: FontWeight.w100,
-                                letterSpacing: -2.0,
-                                height: 1.0,
+                            Positioned(
+                              top: 20,
+                              left: 20,
+                              child: Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: colors.primary.withValues(alpha: 0.5),
+                                  shape: BoxShape.circle,
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            // Nhãn trạng thái
-                            if (nextAlarm != null)
-                              Text(
-                                alarmLabel.toUpperCase(),
-                                style: TextStyle(
-                                  color: colors.onPrimary.withOpacity(0.7),
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.8,
-                                ),
-                              )
-                            else
-                              AnimatedBuilder(
-                                animation: _breathingController,
-                                builder: (context, child) {
-                                  return Opacity(
-                                    opacity:
-                                        0.3 +
-                                        (_breathingController.value * 0.4),
-                                    child: child,
-                                  );
-                                },
-                                child: Text(
-                                  'CHƯA ĐẶT BÁO THỨC',
-                                  style: TextStyle(
-                                    color: colors.onPrimary.withOpacity(0.8),
-                                    fontSize: 8,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 1.0,
-                                  ),
-                                ),
-                              ),
                           ],
                         ),
+                      ),
+                    );
+                  },
+                ),
+
+                // Lớp 3: Inner Counter-Rotating Ring (Vòng xoay ngược chiều)
+                AnimatedBuilder(
+                  animation: _rotateController,
+                  builder: (context, child) {
+                    return Transform.rotate(
+                      angle: -_rotateController.value * 4 * math.pi,
+                      child: Container(
+                        width: 190,
+                        height: 190,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: colors.primary.withValues(alpha: 0.1),
+                            width: 1,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+
+                // Lớp 4: The Moon Core (Lõi trung tâm rực rỡ - Phương án 1: Hợp nhất tại tâm)
+                Container(
+                  width: 175,
+                  height: 175,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        colors.primary,
+                        colors.primary.withValues(alpha: 0.8),
                       ],
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: colors.primary.withValues(alpha: 0.4),
+                        blurRadius: 40,
+                        spreadRadius: 8,
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Biểu tượng Mặt trăng (Lớp nền mờ ở chính giữa)
+                      Center(
+                        child: Icon(
+                          Icons.nightlight_round,
+                          color: colors.onPrimary.withValues(alpha: 0.08),
+                          size: 110, // Phóng lớn bao quanh đồng hồ
+                        ),
+                      ),
+
+                      // Cụm nội dung chính (Foreground)
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            timeStr,
+                            style: TextStyle(
+                              color: colors.onPrimary,
+                              fontSize:
+                                  56, // Tăng size lên một chút cho hoành tráng
+                              fontWeight: FontWeight.w100,
+                              letterSpacing: -2.0,
+                              height: 1.0,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          // Nhãn trạng thái
+                          if (nextAlarm != null)
+                            Text(
+                              alarmLabel.toUpperCase(),
+                              style: TextStyle(
+                                color: colors.onPrimary.withValues(alpha: 0.7),
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.8,
+                              ),
+                            )
+                          else
+                            AnimatedBuilder(
+                              animation: _breathingController,
+                              builder: (context, child) {
+                                return Opacity(
+                                  opacity:
+                                      0.3 + (_breathingController.value * 0.4),
+                                  child: child,
+                                );
+                              },
+                              child: Text(
+                                'CHƯA ĐẶT BÁO THỨC',
+                                style: TextStyle(
+                                  color: colors.onPrimary.withValues(
+                                    alpha: 0.8,
+                                  ),
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 1.0,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -513,16 +493,21 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildQuickStats(ColorScheme colors, int? sleepMins) {
+  Widget _buildQuickStats(
+    BuildContext context,
+    ColorScheme colors,
+    int? sleepMins,
+  ) {
     String duration = sleepMins != null ? sleepMins.formatAsDuration() : '--';
     String score = sleepMins != null
-        ? "${(sleepMins / 5.4).clamp(0, 100).toInt()}/100"
+        ? '${(sleepMins / 5.4).clamp(0, 100).toInt()}/100'
         : '--';
 
     return Row(
       children: [
         Expanded(
           child: _buildStatBox(
+            context,
             Icons.nightlight_outlined,
             'Thời lượng dự kiến',
             duration,
@@ -532,6 +517,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         const SizedBox(width: 16),
         Expanded(
           child: _buildStatBox(
+            context,
             Icons.auto_awesome,
             'Điểm dự báo',
             score,
@@ -543,6 +529,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Widget _buildStatBox(
+    BuildContext context,
     IconData icon,
     String title,
     String value,
@@ -557,7 +544,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: colors.onSurface.withOpacity(0.04),
+            color: colors.onSurface.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -611,7 +598,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: colors.onSecondary.withOpacity(0.5),
+              color: colors.onSecondary.withValues(alpha: 0.5),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -659,9 +646,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  "Bạn đang làm rất tốt! Hãy tiếp tục duy trì nhé.",
+                  'Bạn đang làm rất tốt! Hãy tiếp tục duy trì nhé.',
                   style: TextStyle(
-                    color: colors.onSecondaryContainer.withOpacity(0.8),
+                    color: colors.onSecondaryContainer.withValues(alpha: 0.8),
                     fontSize: 13,
                     height: 1.4,
                   ),
@@ -684,7 +671,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: colors.onSurface.withOpacity(0.04),
+            color: colors.onSurface.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -796,7 +783,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: colors.onSurface.withOpacity(0.04),
+                  color: colors.onSurface.withValues(alpha: 0.04),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -846,7 +833,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: colors.onSurface.withOpacity(0.04),
+                  color: colors.onSurface.withValues(alpha: 0.04),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),

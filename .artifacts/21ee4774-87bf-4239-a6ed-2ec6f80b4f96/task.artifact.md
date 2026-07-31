@@ -1,0 +1,4 @@
+- [ ] Update `AndroidManifest.xml` with background wake permissions and Activity flags
+- [ ] Configure `ScheduledNotificationReceiver` and `ScheduledNotificationBootReceiver` in manifest
+- [ ] Update `PreAlarmService` to use full-screen intents and high-priority categories
+- [ ] Rebuild and verify (Gỡ app, clean, cài lại)

@@ -2,6 +2,7 @@ import 'package:alarm/alarm.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../../core/services/pre_alarm_service.dart';
 import '../../domain/entities/alarm_schedules_entity.dart';
 import '../../domain/repositories/alarm_repository.dart';
 import '../models/alarm_schedules_model.dart';
@@ -80,9 +81,13 @@ class AlarmRepository implements IAlarmRepository {
         );
 
         await Alarm.set(alarmSettings: alarmSettings);
+        await PreAlarmService.schedulePreAlarm(alarmSchedule);
+        await PreAlarmService.scheduleBedtimeReminder(alarmSchedule);
       } else {
         final alarmId = alarmSchedule.id.hashCode.abs();
         await Alarm.stop(alarmId);
+        await PreAlarmService.cancelPreAlarm(alarmSchedule.id);
+        await PreAlarmService.cancelBedtimeReminder(alarmSchedule.id);
       }
     } catch (e) {
       throw Exception('Lỗi khi thiết lập báo thức: $e');
@@ -132,6 +137,8 @@ class AlarmRepository implements IAlarmRepository {
 
         // Hủy chuông trên máy
         await Alarm.stop(id.hashCode.abs());
+        await PreAlarmService.cancelPreAlarm(id);
+        await PreAlarmService.cancelBedtimeReminder(id);
       }
 
       await batch.commit();

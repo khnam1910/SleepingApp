@@ -1,0 +1,20 @@
+@echo off
+"E:\\Tool\\AndroidStudio\\Sdk\\cmake\\3.22.1\\bin\\cmake.exe" ^
+  "-HE:\\Tool\\FlutterSDK\\flutter\\packages\\flutter_tools\\gradle\\src\\main\\scripts" ^
+  "-DCMAKE_SYSTEM_NAME=Android" ^
+  "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON" ^
+  "-DCMAKE_SYSTEM_VERSION=24" ^
+  "-DANDROID_PLATFORM=android-24" ^
+  "-DANDROID_ABI=x86_64" ^
+  "-DCMAKE_ANDROID_ARCH_ABI=x86_64" ^
+  "-DANDROID_NDK=E:\\Tool\\AndroidStudio\\Sdk\\ndk\\28.2.13676358" ^
+  "-DCMAKE_ANDROID_NDK=E:\\Tool\\AndroidStudio\\Sdk\\ndk\\28.2.13676358" ^
+  "-DCMAKE_TOOLCHAIN_FILE=E:\\Tool\\AndroidStudio\\Sdk\\ndk\\28.2.13676358\\build\\cmake\\android.toolchain.cmake" ^
+  "-DCMAKE_MAKE_PROGRAM=E:\\Tool\\AndroidStudio\\Sdk\\cmake\\3.22.1\\bin\\ninja.exe" ^
+  "-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=E:\\TuHoc\\android\\flutter\\sleeping_app_flutter\\android\\app\\build\\intermediates\\cxx\\debug\\6h70l36v\\obj\\x86_64" ^
+  "-DCMAKE_RUNTIME_OUTPUT_DIRECTORY=E:\\TuHoc\\android\\flutter\\sleeping_app_flutter\\android\\app\\build\\intermediates\\cxx\\debug\\6h70l36v\\obj\\x86_64" ^
+  "-BE:\\TuHoc\\android\\flutter\\sleeping_app_flutter\\android\\app\\.cxx\\debug\\6h70l36v\\x86_64" ^
+  -GNinja ^
+  -Wno-dev ^
+  --no-warn-unused-cli ^
+  "-DCMAKE_BUILD_TYPE=debug"
