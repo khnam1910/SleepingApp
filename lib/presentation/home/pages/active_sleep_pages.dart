@@ -60,7 +60,7 @@ class _ActiveSleepScreenState extends State<ActiveSleepScreen>
   String _formatTime(DateTime time) {
     String h = time.hour.toString().padLeft(2, '0');
     String m = time.minute.toString().padLeft(2, '0');
-    return "$h:$m";
+    return '$h:$m';
   }
 
   @override
@@ -82,7 +82,7 @@ class _ActiveSleepScreenState extends State<ActiveSleepScreen>
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  "Đang theo dõi giấc ngủ",
+                  'Đang theo dõi giấc ngủ',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.3),
                     fontSize: 16,
@@ -116,7 +116,7 @@ class _ActiveSleepScreenState extends State<ActiveSleepScreen>
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      "Báo thức: ${widget.wakeUpTime}",
+                      'Báo thức: ${widget.wakeUpTime}',
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.5),
                         fontSize: 18,
@@ -176,7 +176,7 @@ class _ActiveSleepScreenState extends State<ActiveSleepScreen>
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              "Giữ để\nthức dậy",
+                              'Giữ để\nthức dậy',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: Colors.white.withOpacity(0.6),

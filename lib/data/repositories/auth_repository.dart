@@ -158,7 +158,7 @@ class AuthRepository implements IAuthRepository {
           final userData = await _facebookAuth.getUserData();
           realFbAvatar = userData['picture']['data']['url'];
         } catch (e) {
-          print("Không thể lấy ảnh Facebook xịn: $e");
+          print('Không thể lấy ảnh Facebook xịn: $e');
         }
 
         await _createUserDocumentIfNotExists(user, customAvatar: realFbAvatar);
@@ -176,7 +176,7 @@ class AuthRepository implements IAuthRepository {
   Future<void> sendOtp({required String email}) async {
     try {
       await _firebaseFunctions.httpsCallable('requestOtp').call({
-        "email": email,
+        'email': email,
       });
     } on FirebaseFunctionsException catch (e) {
       throw Exception(e.details ?? e.message);
@@ -189,8 +189,8 @@ class AuthRepository implements IAuthRepository {
   Future<void> verifyOtp({required String email, required String otp}) async {
     try {
       await _firebaseFunctions.httpsCallable('verifyOtp').call({
-        "email": email,
-        "otp": otp,
+        'email': email,
+        'otp': otp,
       });
     } catch (e) {
       throw Exception('Mã OTP không đúng hoặc đã hết hạn.');
@@ -211,20 +211,20 @@ class AuthRepository implements IAuthRepository {
     try {
       await _firebaseAuth.signOut();
     } catch (e) {
-      print("Lỗi đăng xuất Firebase: $e");
+      print('Lỗi đăng xuất Firebase: $e');
     }
 
     try {
       await _googleSignIn.signOut();
       await _googleSignIn.disconnect();
     } catch (e) {
-      print("Lỗi ngắt kết nối Google: $e");
+      print('Lỗi ngắt kết nối Google: $e');
     }
 
     try {
       await _facebookAuth.logOut();
     } catch (e) {
-      print("Lỗi đăng xuất Facebook: $e");
+      print('Lỗi đăng xuất Facebook: $e');
     }
   }
 

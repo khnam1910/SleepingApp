@@ -82,7 +82,7 @@ class _ProfilesPageState extends State<ProfilesPage> {
                 color: Colors.transparent,
                 child: InkWell(
                   onTap: () {
-                    print("Chuyển hướng sang trang Sửa thông tin cá nhân");
+                    print('Chuyển hướng sang trang Sửa thông tin cá nhân');
                   },
                   borderRadius: BorderRadius.circular(24),
                   child: Container(
@@ -229,7 +229,7 @@ class _ProfilesPageState extends State<ProfilesPage> {
                       title: 'Nhắc nhở đi ngủ',
                       trailing: Switch(
                         value: _isReminderEnabled,
-                        activeColor: const Color(0xFF676E46),
+                        activeThumbColor: const Color(0xFF676E46),
                         onChanged: (val) =>
                             setState(() => _isReminderEnabled = val),
                       ),

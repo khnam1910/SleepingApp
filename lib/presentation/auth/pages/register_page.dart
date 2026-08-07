@@ -377,7 +377,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                           if (_countdown > 0)
                                             Text(
                                               // Dùng hàm _formattedTime để hiển thị 2:59 thay vì số giây
-                                              'Gửi lại sau ${_formattedTime}',
+                                              'Gửi lại sau $_formattedTime',
                                               style: textTheme.bodySmall
                                                   ?.copyWith(
                                                     color: colorScheme

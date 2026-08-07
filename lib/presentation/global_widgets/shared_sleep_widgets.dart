@@ -515,6 +515,7 @@ class SavedAlarmCard extends StatelessWidget {
   final String duration;
   final String days;
   final bool isActive;
+  final bool isSkipped;
   final ValueChanged<bool> onToggle;
   final ColorScheme colors;
   final bool isSelectionMode;
@@ -530,6 +531,7 @@ class SavedAlarmCard extends StatelessWidget {
     required this.duration,
     required this.days,
     required this.isActive,
+    this.isSkipped = false,
     required this.onToggle,
     required this.colors,
     this.isSelectionMode = false,
@@ -551,6 +553,8 @@ class SavedAlarmCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? colors.primary.withOpacity(0.2)
+              : isSkipped
+              ? colors.surfaceContainerHighest.withOpacity(0.15)
               : isActive
               ? colors.primaryContainer.withOpacity(0.8)
               : colors.surfaceContainerHighest.withOpacity(0.3),
@@ -586,14 +590,39 @@ class SavedAlarmCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title.toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
-                      color: isActive ? colors.primary : colors.outline,
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        title.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.5,
+                          color: isActive ? colors.primary : colors.outline,
+                        ),
+                      ),
+                      if (isSkipped) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: colors.error.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'BỎ QUA HÔM NAY',
+                            style: TextStyle(
+                              fontSize: 8,
+                              fontWeight: FontWeight.w900,
+                              color: colors.error,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 6),
                   Text(
@@ -601,9 +630,11 @@ class SavedAlarmCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 42,
                       fontWeight: FontWeight.w300,
-                      color: isActive
-                          ? colors.onPrimaryContainer
-                          : colors.onSurface,
+                      color: isSkipped
+                          ? colors.onSurface.withOpacity(0.3)
+                          : (isActive
+                                ? colors.onPrimaryContainer
+                                : colors.onSurface),
                       letterSpacing: -1.0,
                       height: 1.0,
                     ),
@@ -614,9 +645,11 @@ class SavedAlarmCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
-                      color: isActive
-                          ? colors.onPrimaryContainer.withOpacity(0.7)
-                          : colors.outline,
+                      color: isSkipped
+                          ? colors.outline.withOpacity(0.5)
+                          : (isActive
+                                ? colors.onPrimaryContainer.withOpacity(0.7)
+                                : colors.outline),
                     ),
                   ),
                 ],
@@ -634,7 +667,7 @@ class SavedAlarmCard extends StatelessWidget {
                     child: Switch(
                       value: isActive,
                       onChanged: onToggle,
-                      activeColor: colors.primary,
+                      activeThumbColor: colors.primary,
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -644,7 +677,9 @@ class SavedAlarmCard extends StatelessWidget {
                       Icon(
                         Icons.bedtime_rounded,
                         size: 14,
-                        color: isActive ? colors.primary : colors.outline,
+                        color: isSkipped
+                            ? colors.outline.withOpacity(0.3)
+                            : (isActive ? colors.primary : colors.outline),
                       ),
                       const SizedBox(width: 4),
                       Text(
@@ -652,7 +687,9 @@ class SavedAlarmCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: isActive ? colors.primary : colors.outline,
+                          color: isSkipped
+                              ? colors.outline.withOpacity(0.3)
+                              : (isActive ? colors.primary : colors.outline),
                         ),
                       ),
                     ],

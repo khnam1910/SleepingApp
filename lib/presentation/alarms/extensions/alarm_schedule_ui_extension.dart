@@ -8,8 +8,8 @@ import 'duration_extension.dart';
 extension AlarmScheduleUIX on AlarmSchedule {
   /// 1. Chuyển đổi danh sách ngày lặp thành text hiển thị trực quan
   String get repeatDaysText {
-    if (repeatDays.isEmpty) return "Chỉ một lần";
-    if (repeatDays.length == 7) return "Mỗi ngày";
+    if (repeatDays.isEmpty) return 'Chỉ một lần';
+    if (repeatDays.length == 7) return 'Mỗi ngày';
 
     // Sắp xếp các thứ từ T2 -> CN
     final sortedDays = List<int>.from(repeatDays)..sort();
@@ -36,8 +36,8 @@ extension AlarmScheduleUIX on AlarmSchedule {
 
   /// 3. Mô tả ngắn gọn tính năng thông minh để hiện badge trên UI
   String get smartWakeBadgeText {
-    if (!isSmartWake) return "Báo thức chuẩn";
-    return "Smart Wake ($smartWakeWindow phút)";
+    if (!isSmartWake) return 'Báo thức chuẩn';
+    return 'Smart Wake ($smartWakeWindow phút)';
   }
 
   /// 4. Tự động tính toán thời lượng ngủ

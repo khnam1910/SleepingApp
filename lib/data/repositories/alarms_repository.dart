@@ -32,9 +32,12 @@ class AlarmRepository implements IAlarmRepository {
           'is_smart_wake': alarmSchedule.isSmartWake,
           'smart_wake_window': alarmSchedule.smartWakeWindow,
           'is_enabled': alarmSchedule.isEnabled,
+          'skipped_at': null, // Reset trạng thái bỏ qua khi lưu thủ công
         };
       }
       alarmJson['user_id'] = userId;
+      alarmJson['skipped_at'] =
+          null; // Đảm bảo ghi đè nếu là AlarmScheduleModel
 
       await _firestore
           .collection('users')

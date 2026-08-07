@@ -12,9 +12,11 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../../data/models/alarm_schedules_model.dart';
 import '../../domain/entities/alarm_schedules_entity.dart';
 import '../../firebase_options.dart';
 
+@pragma('vm:entry-point')
 class PreAlarmService {
   static final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
@@ -106,40 +108,127 @@ class PreAlarmService {
     // Xử lý khi nhấn vào thông báo (mở app)
   }
 
+  @pragma('vm:entry-point')
   static Future<void> notificationTapBackground(
     NotificationResponse response,
   ) async {
+    // 💡 TỐI ƯU HÓA: Chỉ làm những việc tối thiểu cần thiết để đóng UI nhanh nhất
     WidgetsFlutterBinding.ensureInitialized();
-    if (Firebase.apps.isEmpty) {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
+
+    // 0. Khởi tạo Timezone cho Isolate này (Tránh LateInitializationError)
+    tz.initializeTimeZones();
+    try {
+      final String? currentTimeZone = await _timezoneChannel.invokeMethod(
+        'getTimezone',
+      );
+      if (currentTimeZone != null) {
+        tz.setLocalLocation(tz.getLocation(currentTimeZone));
+      }
+    } catch (e) {
+      debugPrint(
+        'PreAlarmService: [BACKGROUND] Could not set local timezone: $e',
       );
     }
 
-    if (response.actionId == 'skip_alarm') {
-      final alarmDocId = response.payload;
-      if (alarmDocId != null) {
-        // 1. Hủy báo thức ngày hôm đó
-        await Alarm.stop(alarmDocId.hashCode.abs());
+    // Khởi tạo plugin thông báo nội bộ để có thể gọi cancel
+    final localNotifications = FlutterLocalNotificationsPlugin();
+    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    await localNotifications.initialize(
+      const InitializationSettings(android: androidInit),
+    );
 
-        // 2. Cập nhật Firestore (Tắt báo thức)
-        final user = FirebaseAuth.instance.currentUser;
-        if (user != null) {
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid)
-              .collection('alarms')
-              .doc(alarmDocId)
-              .update({'is_enabled': false});
+    if (response.id != null) {
+      await localNotifications.cancel(response.id!);
+      debugPrint(
+        'PreAlarmService: [BACKGROUND] Đã đóng thông báo ID: ${response.id}',
+      );
+    }
+
+    // Nếu không phải là hành động BỎ QUA thì dừng lại ở đây
+    if (response.actionId != 'skip_alarm') {
+      debugPrint(
+        'PreAlarmService: [BACKGROUND] Kết thúc (Hành động: ${response.actionId})',
+      );
+      return;
+    }
+
+    final alarmDocId = response.payload;
+    if (alarmDocId == null) return;
+
+    // ƯU TIÊN: Thực hiện các tác vụ nặng (Firebase, Alarm)
+    try {
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+      }
+      await Alarm.init();
+
+      // 1. Dừng chuông hiện tại
+      await Alarm.stop(alarmDocId.hashCode.abs());
+      debugPrint(
+        'PreAlarmService: [BACKGROUND] Đã dừng chuông báo thức hiện tại.',
+      );
+
+      // 2. Lấy thông tin báo thức để đặt lịch cho lần kế tiếp (Ngày mai hoặc ngày lặp lại tiếp theo)
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('alarms')
+            .doc(alarmDocId)
+            .get();
+
+        if (doc.exists && doc.data() != null) {
+          final alarm = AlarmScheduleModel.fromJson(doc.data()!, doc.id);
+
+          // Tính toán thời điểm reo tiếp theo (bắt đầu từ thời điểm này + 10 phút để chắc chắn bỏ qua hôm nay)
+          final nextRing = alarm.getNextRingTime(
+            DateTime.now().add(const Duration(minutes: 10)),
+          );
+
+          if (nextRing != null) {
+            // 3. Đánh dấu là đã Bỏ qua hôm nay trong database để UI hiển thị OFF
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .collection('alarms')
+                .doc(alarmDocId)
+                .update({'skipped_at': DateTime.now().toIso8601String()});
+
+            // 4. Đặt lại báo thức cho ngày kế tiếp
+            final alarmSettings = AlarmSettings(
+              id: alarm.id.hashCode.abs(),
+              dateTime: nextRing,
+              assetAudioPath: 'assets/sounds/gentle_wake.mp3',
+              loopAudio: true,
+              vibrate: true,
+              volumeSettings: VolumeSettings.fade(
+                volume: 0.8,
+                fadeDuration: const Duration(seconds: 3),
+                volumeEnforced: true,
+              ),
+              notificationSettings: const NotificationSettings(
+                title: 'Đã đến giờ thức dậy!',
+                body: 'Chào buổi sáng, chúc bạn một ngày tốt lành.',
+              ),
+            );
+
+            await Alarm.set(alarmSettings: alarmSettings);
+
+            // Đặt lại các nhắc nhở Pre-alarm và Bedtime cho ngày kế tiếp
+            await schedulePreAlarm(alarm);
+            await scheduleBedtimeReminder(alarm);
+
+            debugPrint(
+              'PreAlarmService: [BACKGROUND] Đã tự động đặt lịch báo thức mới vào: ${nextRing.toString()}',
+            );
+          }
         }
       }
-    } else {
-      // Dành cho 'cancel_prompt' (HỦY) hoặc vuốt bỏ thông báo
-      // Vẫn thực hiện báo thức -> Bật chế độ Không làm phiền (DND)
-      bool isAllowed = await _dndPlugin.isNotificationPolicyAccessGranted();
-      if (isAllowed) {
-        await _dndPlugin.setInterruptionFilter(InterruptionFilter.none);
-      }
+    } catch (e) {
+      debugPrint('PreAlarmService: [BACKGROUND] Lỗi xử lý BỎ QUA: $e');
     }
   }
 
@@ -214,7 +303,7 @@ class PreAlarmService {
       'Còn 5 phút nữa báo thức sẽ reo. Bạn muốn làm gì?',
       scheduledDate,
       const NotificationDetails(android: androidDetails),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.alarmClock,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
       payload: alarm.id,
@@ -226,7 +315,7 @@ class PreAlarmService {
   }
 
   static Future<void> cancelBedtimeReminder(String alarmId) async {
-    await _notificationsPlugin.cancel((alarmId + '_bedtime').hashCode.abs());
+    await _notificationsPlugin.cancel(('${alarmId}_bedtime').hashCode.abs());
   }
 
   static Future<void> scheduleBedtimeReminder(AlarmSchedule alarm) async {
@@ -262,7 +351,7 @@ class PreAlarmService {
     }
 
     // Nhắc nhở trước 3 phút
-    final reminderTime = bedTime.subtract(const Duration(minutes: 3));
+    final reminderTime = bedTime.subtract(const Duration(minutes: 5));
     debugPrint(
       'PreAlarmService: [CHECK BEDTIME] Target Reminder: ${reminderTime.toString()}',
     );
@@ -283,7 +372,7 @@ class PreAlarmService {
     );
 
     // --- PHẦN CODE ĐỂ BẠN TEST TRỰC TIẾP TRÊN CONSOLE ---
-    final int timerId = (alarm.id + '_debug').hashCode.abs();
+    final int timerId = ('${alarm.id}_debug').hashCode.abs();
     _debugTimers[timerId]?.cancel(); // Hủy timer cũ nếu có
 
     final durationToWait = reminderTime.difference(now);
@@ -313,6 +402,18 @@ class PreAlarmService {
               .alarm, // Chuyển sang Alarm để ưu tiên cao hơn
           visibility: NotificationVisibility.public,
           fullScreenIntent: true,
+          actions: <AndroidNotificationAction>[
+            AndroidNotificationAction(
+              'skip_alarm',
+              'BỎ QUA',
+              cancelNotification: true,
+            ),
+            AndroidNotificationAction(
+              'cancel_prompt',
+              'HỦY',
+              cancelNotification: true,
+            ),
+          ],
         );
 
     // Kiểm tra và yêu cầu quyền Exact Alarm một lần nữa
@@ -328,14 +429,14 @@ class PreAlarmService {
     try {
       debugPrint('PreAlarmService: Attempting to schedule notification...');
 
-      // Sử dụng inexactAllowWhileIdle để đảm bảo khả năng tương thích cao nhất
+      // Sử dụng alarmClock để đảm bảo độ chính xác tuyệt đối và đánh thức Isolate
       await _notificationsPlugin.zonedSchedule(
-        (alarm.id + '_bedtime').hashCode.abs(),
+        ('${alarm.id}_bedtime').hashCode.abs(),
         'Sắp đến giờ đi ngủ rồi!',
         'Còn 3 phút nữa là đến giờ đi ngủ theo lịch trình. Hãy thư giãn nhé!',
         scheduledDate,
         const NotificationDetails(android: androidDetails),
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.alarmClock,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
         payload: alarm.id,
@@ -384,7 +485,7 @@ class PreAlarmService {
           category: AndroidNotificationCategory.alarm,
         ),
       ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.alarmClock,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
     );
@@ -472,6 +573,9 @@ class PreAlarmService {
 }
 
 @pragma('vm:entry-point')
-void notificationTapBackground(NotificationResponse response) {
-  PreAlarmService.notificationTapBackground(response);
+void notificationTapBackground(NotificationResponse response) async {
+  debugPrint(
+    '--- TOP LEVEL BACKGROUND HANDLER CALLED (ID: ${response.id}) ---',
+  );
+  await PreAlarmService.notificationTapBackground(response);
 }

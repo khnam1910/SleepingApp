@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -18,7 +16,32 @@ class AlarmsPage extends StatefulWidget {
   State<AlarmsPage> createState() => _AlarmsPageState();
 }
 
-class _AlarmsPageState extends State<AlarmsPage> {
+class _AlarmsPageState extends State<AlarmsPage> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Tự động tải lại danh sách khi quay lại app từ đa nhiệm
+    if (state == AppLifecycleState.resumed) {
+      context.read<AlarmBloc>().add(LoadAlarmsRequested());
+    }
+  }
+
+  bool _isSameDay(DateTime? d1, DateTime d2) {
+    if (d1 == null) return false;
+    return d1.year == d2.year && d1.month == d2.month && d1.day == d2.day;
+  }
+
   PreferredSizeWidget _buildAppBar(AlarmState state, ColorScheme colors) {
     if (state.isSelectionMode) {
       return AppBar(
@@ -124,7 +147,7 @@ class _AlarmsPageState extends State<AlarmsPage> {
                       const Center(
                         child: Padding(
                           padding: EdgeInsets.symmetric(vertical: 20),
-                          child: Text("Chưa có lịch trình nào"),
+                          child: Text('Chưa có lịch trình nào'),
                         ),
                       )
                     else
@@ -132,6 +155,10 @@ class _AlarmsPageState extends State<AlarmsPage> {
                         final isSelected = state.selectedAlarmIds.contains(
                           alarm.id,
                         );
+
+                        // 💡 Logic: Kiểm tra xem hôm nay có bị bỏ qua không
+                        final bool isSkippedToday =
+                            _isSameDay(alarm.skippedAt, DateTime.now());
 
                         return Dismissible(
                           key: Key(alarm.id),
@@ -162,6 +189,7 @@ class _AlarmsPageState extends State<AlarmsPage> {
                             duration: alarm.sleepDurationText,
                             days: alarm.repeatDaysText,
                             isActive: alarm.isEnabled,
+                            isSkipped: isSkippedToday,
                             isSelectionMode: state.isSelectionMode,
                             isSelected: isSelected,
                             onToggle: (val) {

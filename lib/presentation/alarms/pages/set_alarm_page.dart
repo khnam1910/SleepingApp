@@ -800,7 +800,7 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
                             value: _isVibrationActive,
                             onChanged: (val) =>
                                 setState(() => _isVibrationActive = val),
-                            activeColor: colors.primary,
+                            activeThumbColor: colors.primary,
                           ),
                         ],
                       ),

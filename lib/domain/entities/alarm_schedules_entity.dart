@@ -8,6 +8,7 @@ class AlarmSchedule {
   final int smartWakeWindow; // Số phút dao động cho Smart Wake
   final bool isEnabled;
   final DateTime createdAt; // Thời gian tạo lịch trình
+  final DateTime? skippedAt; // Ngày cuối cùng nhấn Bỏ qua
 
   const AlarmSchedule({
     required this.id,
@@ -19,6 +20,7 @@ class AlarmSchedule {
     required this.smartWakeWindow,
     required this.isEnabled,
     required this.createdAt,
+    this.skippedAt,
   });
 
   // ==========================================
@@ -145,6 +147,7 @@ class AlarmSchedule {
     int? smartWakeWindow,
     bool? isEnabled,
     DateTime? createdAt,
+    DateTime? skippedAt,
   }) {
     return AlarmSchedule(
       id: id ?? this.id,
@@ -156,6 +159,7 @@ class AlarmSchedule {
       smartWakeWindow: smartWakeWindow ?? this.smartWakeWindow,
       isEnabled: isEnabled ?? this.isEnabled,
       createdAt: createdAt ?? this.createdAt,
+      skippedAt: skippedAt ?? this.skippedAt,
     );
   }
 }

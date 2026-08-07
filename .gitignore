@@ -43,3 +43,21 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Firebase & Secrets
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+android/key.properties
+*.jks
+*.keystore
+.env
+
+# AI Assistant
+.agents/
+.artifacts/
+skills-lock.json
+
+# Local properties
+android/local.properties
+.idea/
+.vscode/

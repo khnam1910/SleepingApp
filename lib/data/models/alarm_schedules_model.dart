@@ -11,6 +11,7 @@ class AlarmScheduleModel extends AlarmSchedule {
     required super.smartWakeWindow,
     required super.isEnabled,
     required super.createdAt,
+    super.skippedAt,
   });
 
   factory AlarmScheduleModel.fromJson(
@@ -21,7 +22,7 @@ class AlarmScheduleModel extends AlarmSchedule {
       id: documentId,
       userId: json['user_id'] as String,
       wakeUpTime: json['wake_up_time'] as String,
-      bedTime: json['bed_time'] as String? ?? "23:00",
+      bedTime: json['bed_time'] as String? ?? '23:00',
       repeatDays:
           (json['repeat_days'] as List<dynamic>?)
               ?.map((e) => e as int)
@@ -33,6 +34,9 @@ class AlarmScheduleModel extends AlarmSchedule {
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : DateTime.now(),
+      skippedAt: json['skipped_at'] != null
+          ? DateTime.parse(json['skipped_at'] as String)
+          : null,
     );
   }
 
@@ -46,6 +50,7 @@ class AlarmScheduleModel extends AlarmSchedule {
       'smart_wake_window': smartWakeWindow,
       'is_enabled': isEnabled,
       'created_at': createdAt.toIso8601String(),
+      'skipped_at': skippedAt?.toIso8601String(),
     };
   }
 }
