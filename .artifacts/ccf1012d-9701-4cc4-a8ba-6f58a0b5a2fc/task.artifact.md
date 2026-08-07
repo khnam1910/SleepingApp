@@ -1,8 +1,0 @@
-- `[x]` Khắc phục lỗi build và lấy múi giờ Native
-    - `[x]` Gỡ bỏ `flutter_timezone` trong `pubspec.yaml`
-    - `[x]` Thêm `MethodChannel` lấy múi giờ vào `MainActivity.kt`
-    - `[x]` Cập nhật `PreAlarmService` để gọi Native múi giờ
-- `[ ]` Xác minh
-    - `[x]` Hướng dẫn người dùng chạy `flutter pub get`
-    - `[ ]` Chạy build APK/Debug
-    - `[ ]` Kiểm tra log múi giờ `Asia/Ho_Chi_Minh`
