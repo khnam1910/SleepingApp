@@ -1,0 +1,12 @@
+# Ignore platform-specific and generated code from GitHub language stats
+android/**/* linguist-vendored
+ios/**/* linguist-vendored
+functions/node_modules/**/* linguist-vendored
+functions/lib/**/* linguist-vendored
+.agents/**/* linguist-vendored
+.artifacts/**/* linguist-vendored
+assets/**/* linguist-vendored
+build/**/* linguist-vendored
+*.html linguist-vendored
+*.js linguist-vendored
+Makefile linguist-vendored
