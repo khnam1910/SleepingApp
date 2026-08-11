@@ -44,7 +44,7 @@ class PreAlarmService {
     }
 
     const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('ic_leaf');
 
     const InitializationSettings initializationSettings =
         InitializationSettings(
@@ -65,16 +65,17 @@ class PreAlarmService {
           AndroidFlutterLocalNotificationsPlugin
         >();
 
-    // Tạo Notification Channel chung
+    // Tạo Notification Channel mới với ưu tiên tuyệt đối
     await platform?.createNotificationChannel(
       const AndroidNotificationChannel(
-        'pre_alarm_channel',
-        'Thông báo hệ thống',
-        description: 'Kênh thông báo chính cho báo thức và đi ngủ',
+        'high_priority_alerts',
+        'Cảnh báo giấc ngủ',
+        description: 'Kênh quan trọng nhất cho báo thức và nhắc nhở',
         importance: Importance.max,
         playSound: true,
         enableVibration: true,
         enableLights: true,
+        showBadge: true,
       ),
     );
 
@@ -90,15 +91,17 @@ class PreAlarmService {
     // Gửi một thông báo test ngay lập tức để kiểm tra Icon và Channel
     await _notificationsPlugin.show(
       999,
-      'Hệ thống thông báo',
-      'Dịch vụ nhắc nhở đã sẵn sàng hoạt động!',
+      'Organic Sleep',
+      'Hệ thống thông báo đã chuyển sang biểu tượng lá mới!',
       const NotificationDetails(
         android: AndroidNotificationDetails(
-          'pre_alarm_channel',
-          'Thông báo hệ thống',
+          'high_priority_alerts',
+          'Cảnh báo giấc ngủ',
           importance: Importance.max,
-          priority: Priority.max, // Tăng lên Max
-          fullScreenIntent: true, // Ép hiện banner
+          priority: Priority.max,
+          fullScreenIntent: false,
+          enableVibration: true,
+          enableLights: true,
         ),
       ),
     );
@@ -268,14 +271,16 @@ class PreAlarmService {
 
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
-          'pre_alarm_channel',
-          'Nhắc nhở thức dậy',
-          channelDescription: 'Thông báo xuất hiện trước giờ báo thức reo',
+          'high_priority_alerts',
+          'Cảnh báo giấc ngủ',
+          channelDescription: 'Kênh quan trọng nhất cho báo thức và nhắc nhở',
           importance: Importance.max,
           priority: Priority.max,
-          fullScreenIntent: true,
+          fullScreenIntent: false, // ❌ Tắt tự động mở app
           category: AndroidNotificationCategory.alarm,
           visibility: NotificationVisibility.public,
+          enableVibration: true,
+          enableLights: true,
           actions: <AndroidNotificationAction>[
             AndroidNotificationAction(
               'skip_alarm',
@@ -393,15 +398,16 @@ class PreAlarmService {
 
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
-          'pre_alarm_channel', // Dùng chung kênh đã hoạt động
-          'Thông báo hệ thống',
-          channelDescription: 'Kênh thông báo chính cho báo thức và đi ngủ',
+          'high_priority_alerts',
+          'Cảnh báo giấc ngủ',
+          channelDescription: 'Kênh quan trọng nhất cho báo thức và nhắc nhở',
           importance: Importance.max,
           priority: Priority.max,
-          category: AndroidNotificationCategory
-              .alarm, // Chuyển sang Alarm để ưu tiên cao hơn
+          category: AndroidNotificationCategory.alarm,
           visibility: NotificationVisibility.public,
-          fullScreenIntent: true,
+          fullScreenIntent: false,
+          enableVibration: true,
+          enableLights: true,
           actions: <AndroidNotificationAction>[
             AndroidNotificationAction(
               'skip_alarm',
@@ -473,16 +479,18 @@ class PreAlarmService {
     await _notificationsPlugin.zonedSchedule(
       888,
       'Thông báo Test 10s',
-      'Nếu bạn thấy cái này, đặt lịch tương lai đã chạy!',
+      'Nếu bạn thấy cái này, biểu tượng lá và banner đã chạy!',
       tzDate,
       const NotificationDetails(
         android: AndroidNotificationDetails(
-          'pre_alarm_channel',
-          'Thông báo hệ thống',
+          'high_priority_alerts',
+          'Cảnh báo giấc ngủ',
           importance: Importance.max,
           priority: Priority.max,
-          fullScreenIntent: true,
+          fullScreenIntent: false,
           category: AndroidNotificationCategory.alarm,
+          enableVibration: true,
+          enableLights: true,
         ),
       ),
       androidScheduleMode: AndroidScheduleMode.alarmClock,
