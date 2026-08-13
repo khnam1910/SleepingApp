@@ -4,12 +4,12 @@ import 'package:flutter_svg/svg.dart';
 import 'package:sleeping_app_flutter/presentation/layout/main_layout.dart';
 
 import '../../../core/utils/app_validator.dart';
+import '../../../core/utils/top_notification_helper.dart';
 import '../bloc/auth_bloc.dart';
 import '../widgets/custom_label_input.dart';
 import '../widgets/custom_text_field.dart';
 import 'forgot_password.dart';
 import 'register_page.dart';
-import '../../../core/utils/top_notification_helper.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -113,10 +113,14 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          child: Icon(
-                            Icons.eco,
-                            size: 28,
-                            color: colorScheme.onPrimaryContainer,
+                          child: SvgPicture.asset(
+                            'assets/icons/logo.svg',
+                            width: 28,
+                            height: 28,
+                            colorFilter: ColorFilter.mode(
+                              colorScheme.onPrimaryContainer,
+                              BlendMode.srcIn,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 12),

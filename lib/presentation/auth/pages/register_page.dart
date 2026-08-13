@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:pinput/pinput.dart';
 import 'package:sleeping_app_flutter/core/utils/app_validator.dart';
 import 'package:sleeping_app_flutter/core/utils/top_notification_helper.dart';
@@ -178,10 +179,14 @@ class _RegisterPageState extends State<RegisterPage> {
                                 ),
                                 borderRadius: BorderRadius.circular(16),
                               ),
-                              child: Icon(
-                                Icons.eco,
-                                size: 28,
-                                color: colorScheme.onPrimaryContainer,
+                              child: SvgPicture.asset(
+                                'assets/icons/logo.svg',
+                                width: 28,
+                                height: 28,
+                                colorFilter: ColorFilter.mode(
+                                  colorScheme.onPrimaryContainer,
+                                  BlendMode.srcIn,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 12),

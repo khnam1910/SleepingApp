@@ -44,7 +44,7 @@ class PreAlarmService {
     }
 
     const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('ic_leaf');
+        AndroidInitializationSettings('ic_notification_small');
 
     const InitializationSettings initializationSettings =
         InitializationSettings(
@@ -92,7 +92,7 @@ class PreAlarmService {
     await _notificationsPlugin.show(
       999,
       'Organic Sleep',
-      'Hệ thống thông báo đã chuyển sang biểu tượng lá mới!',
+      'Hệ thống thông báo đã chuyển sang logo mới!',
       const NotificationDetails(
         android: AndroidNotificationDetails(
           'high_priority_alerts',
@@ -102,6 +102,7 @@ class PreAlarmService {
           fullScreenIntent: false,
           enableVibration: true,
           enableLights: true,
+          largeIcon: DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
         ),
       ),
     );
@@ -281,6 +282,7 @@ class PreAlarmService {
           visibility: NotificationVisibility.public,
           enableVibration: true,
           enableLights: true,
+          largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
           actions: <AndroidNotificationAction>[
             AndroidNotificationAction(
               'skip_alarm',
@@ -408,6 +410,7 @@ class PreAlarmService {
           fullScreenIntent: false,
           enableVibration: true,
           enableLights: true,
+          largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
           actions: <AndroidNotificationAction>[
             AndroidNotificationAction(
               'skip_alarm',
@@ -491,6 +494,7 @@ class PreAlarmService {
           category: AndroidNotificationCategory.alarm,
           enableVibration: true,
           enableLights: true,
+          largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
         ),
       ),
       androidScheduleMode: AndroidScheduleMode.alarmClock,

@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:sleeping_app_flutter/presentation/profile/bloc/profile_bloc.dart';
 import 'package:sleeping_app_flutter/presentation/profile/bloc/profile_state.dart';
 import 'package:sleeping_app_flutter/presentation/profile/pages/profile_pages.dart';
@@ -38,7 +39,15 @@ class SharedAppBar extends StatelessWidget implements PreferredSizeWidget {
           color: colors.primaryContainer.withOpacity(0.4),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Icon(Icons.eco, size: 24, color: colors.onPrimaryContainer),
+        child: SvgPicture.asset(
+          'assets/icons/logo.svg',
+          width: 24,
+          height: 24,
+          colorFilter: ColorFilter.mode(
+            colors.onPrimaryContainer,
+            BlendMode.srcIn,
+          ),
+        ),
       ),
       // Avatar bên trái kèm hiệu ứng chuyển trang mượt mà
       leading: Padding(

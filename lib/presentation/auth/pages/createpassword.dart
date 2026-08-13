@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/svg.dart';
 
 import '../../../core/utils/app_validator.dart';
+import '../../../core/utils/top_notification_helper.dart';
 import '../bloc/auth_bloc.dart';
 import '../widgets/custom_label_input.dart';
 import '../widgets/custom_text_field.dart';
-import '../../../core/utils/top_notification_helper.dart';
 
 class CreatePasswordPage extends StatefulWidget {
-  // 1. THÊM BIẾN EMAIL: Nhận từ trang Register truyền sang
   final String email;
 
   const CreatePasswordPage({super.key, required this.email});
@@ -31,7 +31,6 @@ class _CreatePasswordPageState extends State<CreatePasswordPage> {
 
   void _onFinish() {
     if (_formKey.currentState!.validate()) {
-      // 2. GỌI BLOC: Bắn sự kiện tạo tài khoản
       context.read<AuthBloc>().add(
         AuthRegisterRequested(
           email: widget.email,
@@ -46,7 +45,6 @@ class _CreatePasswordPageState extends State<CreatePasswordPage> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    // 3. THÊM BLOCCONSUMER: Lắng nghe trạng thái tạo tài khoản
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated) {
@@ -66,7 +64,6 @@ class _CreatePasswordPageState extends State<CreatePasswordPage> {
         }
       },
       builder: (context, state) {
-        // Lấy trạng thái loading để khóa form
         final isLoading = state is AuthLoading;
 
         return GestureDetector(
@@ -107,10 +104,14 @@ class _CreatePasswordPageState extends State<CreatePasswordPage> {
                                       .withValues(alpha: 0.4),
                                   borderRadius: BorderRadius.circular(16),
                                 ),
-                                child: Icon(
-                                  Icons.eco,
-                                  size: 28,
-                                  color: colorScheme.onPrimaryContainer,
+                                child: SvgPicture.asset(
+                                  'assets/icons/logo.svg',
+                                  width: 28,
+                                  height: 28,
+                                  colorFilter: ColorFilter.mode(
+                                    colorScheme.onPrimaryContainer,
+                                    BlendMode.srcIn,
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: 12),
@@ -165,7 +166,6 @@ class _CreatePasswordPageState extends State<CreatePasswordPage> {
                                         hintText: 'Nhập mật khẩu mới',
                                         prefixIcon: Icons.lock_outline,
                                         isPassword: true,
-                                        // Vô hiệu hóa input khi đang tải
                                         enabled: !isLoading,
                                       ),
                                       const SizedBox(height: 4),
@@ -189,7 +189,6 @@ class _CreatePasswordPageState extends State<CreatePasswordPage> {
                                       SizedBox(
                                         width: double.infinity,
                                         height: 52,
-                                        // 4. CẬP NHẬT NÚT BẤM VỚI TRẠNG THÁI LOADING
                                         child: ElevatedButton(
                                           onPressed: isLoading
                                               ? null

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/svg.dart';
 
 import '../../../core/utils/app_validator.dart';
 import '../../../core/utils/top_notification_helper.dart';
@@ -96,10 +97,14 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                                 ),
                                 borderRadius: BorderRadius.circular(16),
                               ),
-                              child: Icon(
-                                Icons.eco,
-                                size: 28,
-                                color: colorScheme.onPrimaryContainer,
+                              child: SvgPicture.asset(
+                                'assets/icons/logo.svg',
+                                width: 28,
+                                height: 28,
+                                colorFilter: ColorFilter.mode(
+                                  colorScheme.onPrimaryContainer,
+                                  BlendMode.srcIn,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 12),
