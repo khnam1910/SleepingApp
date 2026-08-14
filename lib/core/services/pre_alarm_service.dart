@@ -102,6 +102,7 @@ class PreAlarmService {
           fullScreenIntent: false,
           enableVibration: true,
           enableLights: true,
+          color: const Color(0xFFFFFFFF),
           largeIcon: DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
         ),
       ),
@@ -282,6 +283,7 @@ class PreAlarmService {
           visibility: NotificationVisibility.public,
           enableVibration: true,
           enableLights: true,
+          color: Color(0xFFFFFFFF),
           largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
           actions: <AndroidNotificationAction>[
             AndroidNotificationAction(
@@ -410,6 +412,7 @@ class PreAlarmService {
           fullScreenIntent: false,
           enableVibration: true,
           enableLights: true,
+          color: Color(0xFFFFFFFF),
           largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
           actions: <AndroidNotificationAction>[
             AndroidNotificationAction(
@@ -494,6 +497,7 @@ class PreAlarmService {
           category: AndroidNotificationCategory.alarm,
           enableVibration: true,
           enableLights: true,
+          color: Color(0xFFFFFFFF),
           largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
         ),
       ),
