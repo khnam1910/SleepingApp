@@ -157,8 +157,13 @@ class _AlarmsPageState extends State<AlarmsPage> with WidgetsBindingObserver {
                         );
 
                         // 💡 Logic: Kiểm tra xem hôm nay có bị bỏ qua không
-                        final bool isSkippedToday =
-                            _isSameDay(alarm.skippedAt, DateTime.now());
+                        final bool isSkippedToday = _isSameDay(
+                          alarm.skippedAt,
+                          DateTime.now(),
+                        );
+
+                        // 💡 Logic: Kiểm tra xem có phải lịch hàng ngày không
+                        final bool isEveryday = alarm.repeatDays.length == 7;
 
                         return Dismissible(
                           key: Key(alarm.id),
@@ -190,6 +195,7 @@ class _AlarmsPageState extends State<AlarmsPage> with WidgetsBindingObserver {
                             days: alarm.repeatDaysText,
                             isActive: alarm.isEnabled,
                             isSkipped: isSkippedToday,
+                            isEveryday: isEveryday,
                             isSelectionMode: state.isSelectionMode,
                             isSelected: isSelected,
                             onToggle: (val) {

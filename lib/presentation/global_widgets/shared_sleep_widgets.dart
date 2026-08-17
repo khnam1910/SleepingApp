@@ -516,6 +516,7 @@ class SavedAlarmCard extends StatelessWidget {
   final String days;
   final bool isActive;
   final bool isSkipped;
+  final bool isEveryday; // 💡 Thêm thông tin lịch trình mỗi ngày
   final ValueChanged<bool> onToggle;
   final ColorScheme colors;
   final bool isSelectionMode;
@@ -532,6 +533,7 @@ class SavedAlarmCard extends StatelessWidget {
     required this.days,
     required this.isActive,
     this.isSkipped = false,
+    this.isEveryday = false, // 💡 Mặc định là false
     required this.onToggle,
     required this.colors,
     this.isSelectionMode = false,
@@ -564,138 +566,183 @@ class SavedAlarmCard extends StatelessWidget {
             width: 2.0,
           ),
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            if (isSelectionMode) ...[
-              Container(
-                margin: const EdgeInsets.only(right: 16, top: 12),
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isSelected ? colors.primary : Colors.transparent,
-                  border: Border.all(
-                    color: isSelected ? colors.primary : colors.outline,
-                    width: 2,
-                  ),
-                ),
-                child: isSelected
-                    ? Icon(Icons.check, size: 16, color: colors.onPrimary)
-                    : null,
-              ),
-            ],
-            // --- CỘT TRÁI ---
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        title.toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.5,
-                          color: isActive ? colors.primary : colors.outline,
-                        ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (isSelectionMode) ...[
+                  Container(
+                    margin: const EdgeInsets.only(right: 16, top: 12),
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isSelected ? colors.primary : Colors.transparent,
+                      border: Border.all(
+                        color: isSelected ? colors.primary : colors.outline,
+                        width: 2,
                       ),
-                      if (isSkipped) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 1,
-                          ),
-                          decoration: BoxDecoration(
-                            color: colors.error.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            'BỎ QUA HÔM NAY',
+                    ),
+                    child: isSelected
+                        ? Icon(Icons.check, size: 16, color: colors.onPrimary)
+                        : null,
+                  ),
+                ],
+                // --- CỘT TRÁI ---
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            title.toUpperCase(),
                             style: TextStyle(
-                              fontSize: 8,
-                              fontWeight: FontWeight.w900,
-                              color: colors.error,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.5,
+                              color: isActive ? colors.primary : colors.outline,
                             ),
                           ),
+                          if (isSkipped) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 1,
+                              ),
+                              decoration: BoxDecoration(
+                                color: colors.error.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'BỎ QUA HÔM NAY',
+                                style: TextStyle(
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.w900,
+                                  color: colors.error,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        wakeTime,
+                        style: TextStyle(
+                          fontSize: 42,
+                          fontWeight: FontWeight.w300,
+                          color: isSkipped
+                              ? colors.onSurface.withOpacity(0.3)
+                              : (isActive
+                                    ? colors.onPrimaryContainer
+                                    : colors.onSurface),
+                          letterSpacing: -1.0,
+                          height: 1.0,
                         ),
-                      ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        days,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: isSkipped
+                              ? colors.outline.withOpacity(0.5)
+                              : (isActive
+                                    ? colors.onPrimaryContainer.withOpacity(0.7)
+                                    : colors.outline),
+                        ),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    wakeTime,
-                    style: TextStyle(
-                      fontSize: 42,
-                      fontWeight: FontWeight.w300,
-                      color: isSkipped
-                          ? colors.onSurface.withOpacity(0.3)
-                          : (isActive
-                                ? colors.onPrimaryContainer
-                                : colors.onSurface),
-                      letterSpacing: -1.0,
-                      height: 1.0,
-                    ),
+                ),
+
+                // --- CỘT PHẢI ---
+                if (!isSelectionMode)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Transform.scale(
+                        scale: 0.85,
+                        alignment: Alignment.centerRight,
+                        child: Switch(
+                          value: isActive,
+                          onChanged: onToggle,
+                          activeThumbColor: colors.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.bedtime_rounded,
+                            size: 14,
+                            color: isSkipped
+                                ? colors.outline.withOpacity(0.3)
+                                : (isActive ? colors.primary : colors.outline),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '$bedTime • $duration',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: isSkipped
+                                  ? colors.outline.withOpacity(0.3)
+                                  : (isActive
+                                        ? colors.primary
+                                        : colors.outline),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 10),
-                  Text(
-                    days,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: isSkipped
-                          ? colors.outline.withOpacity(0.5)
-                          : (isActive
-                                ? colors.onPrimaryContainer.withOpacity(0.7)
-                                : colors.outline),
-                    ),
-                  ),
-                ],
-              ),
+              ],
             ),
 
-            // --- CỘT PHẢI ---
-            if (!isSelectionMode)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Transform.scale(
-                    scale: 0.85,
-                    alignment: Alignment.centerRight,
-                    child: Switch(
-                      value: isActive,
-                      onChanged: onToggle,
-                      activeThumbColor: colors.primary,
+            // --- DÒNG TRẠNG THÁI CUỐI CÙNG (CHỈ KHI BỎ QUA) ---
+            if (isSkipped && !isSelectionMode) ...[
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  vertical: 8,
+                  horizontal: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: colors.error.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline_rounded,
+                      size: 14,
+                      color: colors.error,
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.bedtime_rounded,
-                        size: 14,
-                        color: isSkipped
-                            ? colors.outline.withOpacity(0.3)
-                            : (isActive ? colors.primary : colors.outline),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '$bedTime • $duration',
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        isEveryday
+                            ? 'Lịch trình sẽ tự động báo lại vào ngày mai.'
+                            : 'Báo thức này đã được tắt cho hôm nay.',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: isSkipped
-                              ? colors.outline.withOpacity(0.3)
-                              : (isActive ? colors.primary : colors.outline),
+                          color: colors.error,
                         ),
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
+            ],
           ],
         ),
       ),

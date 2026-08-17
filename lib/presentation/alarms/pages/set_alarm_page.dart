@@ -53,7 +53,7 @@ class _SetAlarmPageState extends State<SetAlarmPage> {
       repeatDays: repeatDays,
       isSmartWake: widget.existingAlarm?.isSmartWake ?? false,
       smartWakeWindow: widget.existingAlarm?.smartWakeWindow ?? 30,
-      isEnabled: widget.existingAlarm?.isEnabled ?? true,
+      isEnabled: true, // 💡 TỰ ĐỘNG SWITCH ON KHI LƯU
       createdAt: widget.existingAlarm?.createdAt ?? DateTime.now(),
     );
 
